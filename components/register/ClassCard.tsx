@@ -86,7 +86,7 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
             className="rounded-lg object-cover flex-shrink-0"
           />
         ) : (
-          <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
+          <div className="w-20 h-20 bg-cream-200 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
             🏆
           </div>
         )}
@@ -104,7 +104,7 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
           </div>
 
           {dogClass.description && (
-            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+            <p className="text-sm text-stone-700 mt-1 line-clamp-2">
               {dogClass.description}
             </p>
           )}

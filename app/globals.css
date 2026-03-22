@@ -3,9 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-montserrat: "Montserrat", system-ui, sans-serif;
+  /* Essex Therapy Dogs–inspired neutrals (essextherapydogs.co.uk) */
+  --etd-ink: #292929;
+  --etd-cream: #f5f8f2;
+  /* Brand primary — header / identity rgb(42, 38, 108) */
+  --etd-primary: #2a266c;
+  --etd-teal: #0ea1bd;
 }
 
 body {
-  @apply bg-white text-gray-900;
+  @apply bg-cream-100 text-stone-900 antialiased;
 }

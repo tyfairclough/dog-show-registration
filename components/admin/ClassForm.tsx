@@ -18,6 +18,7 @@ import {
   Radio,
 } from "@heroui/react";
 import { DogClass, CreateClassRequest } from "@/types";
+import { DOG_BREED_OPTIONS } from "@/lib/kennelClubBreeds";
 
 interface ClassFormProps {
   isOpen: boolean;
@@ -25,30 +26,6 @@ interface ClassFormProps {
   onSave: (data: CreateClassRequest) => Promise<void>;
   editingClass?: DogClass | null;
 }
-
-const commonBreeds = [
-  "Labrador Retriever",
-  "Golden Retriever",
-  "German Shepherd",
-  "Bulldog",
-  "Beagle",
-  "Poodle",
-  "Rottweiler",
-  "Yorkshire Terrier",
-  "Boxer",
-  "Dachshund",
-  "Cocker Spaniel",
-  "Shih Tzu",
-  "Border Collie",
-  "Jack Russell Terrier",
-  "Cavalier King Charles Spaniel",
-  "Staffordshire Bull Terrier",
-  "French Bulldog",
-  "Springer Spaniel",
-  "Chihuahua",
-  "Mixed Breed / Crossbreed",
-  "Other",
-];
 
 export default function ClassForm({ isOpen, onClose, onSave, editingClass }: ClassFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -210,7 +187,7 @@ export default function ClassForm({ isOpen, onClose, onSave, editingClass }: Cla
                     className="rounded object-cover"
                   />
                 ) : (
-                  <div className="w-[160px] h-[90px] bg-gray-200 rounded flex items-center justify-center text-gray-400">
+                  <div className="w-[160px] h-[90px] bg-cream-200 rounded flex items-center justify-center text-stone-500">
                     No image
                   </div>
                 )}
@@ -269,7 +246,7 @@ export default function ClassForm({ isOpen, onClose, onSave, editingClass }: Cla
             {/* Constraints Section */}
             <div className="border-t pt-4 mt-4">
               <h3 className="text-lg font-medium mb-3">Entry Constraints (Optional)</h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-stone-600 mb-4">
                 Leave empty to allow all dogs. Set constraints to restrict entry.
               </p>
 
@@ -294,7 +271,7 @@ export default function ClassForm({ isOpen, onClose, onSave, editingClass }: Cla
                     selectedKeys={new Set(allowedBreeds)}
                     onSelectionChange={(keys) => setAllowedBreeds(Array.from(keys) as string[])}
                   >
-                    {commonBreeds.map((breed) => (
+                    {DOG_BREED_OPTIONS.map((breed) => (
                       <SelectItem key={breed}>{breed}</SelectItem>
                     ))}
                   </Select>

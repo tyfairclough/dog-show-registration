@@ -47,6 +47,7 @@ export interface Registration {
 }
 
 export interface RegistrationWithDetails extends Registration {
+  owner_id: string;
   dog_name: string;
   dog_breed: string | null;
   dog_age: number | null;

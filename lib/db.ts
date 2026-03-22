@@ -255,6 +255,7 @@ export const registrationOperations = {
     return db.prepare(`
       SELECT 
         r.*,
+        o.id as owner_id,
         d.name as dog_name,
         d.breed as dog_breed,
         d.age as dog_age,

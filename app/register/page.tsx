@@ -32,6 +32,7 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [retrievalToken, setRetrievalToken] = useState<string | null>(null);
 
   // Fetch classes on mount
   useEffect(() => {
@@ -185,8 +186,7 @@ export default function RegisterPage() {
         }
       }
 
-      // Submit and send confirmation email
-      await fetch("/api/registrations/submit", {
+      const submitResponse = await fetch("/api/registrations/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -196,6 +196,14 @@ export default function RegisterPage() {
         }),
       });
 
+      if (!submitResponse.ok) {
+        throw new Error("Failed to finalize registration");
+      }
+
+      const submitJson = (await submitResponse.json()) as { retrievalToken?: string };
+      setRetrievalToken(
+        submitJson.retrievalToken ?? owner.retrieval_token ?? null
+      );
       setSubmitSuccess(true);
     } catch (error) {
       console.error("Submit error:", error);
@@ -219,28 +227,44 @@ export default function RegisterPage() {
   // Success screen
   if (submitSuccess) {
     return (
-      <main className="min-h-screen bg-gray-50 py-12">
+      <main className="bg-cream-100 py-12">
         <div className="container mx-auto px-4 max-w-2xl">
           <Card className="text-center py-12">
             <CardBody className="gap-6">
               <div className="text-6xl">🎉</div>
               <h1 className="text-3xl font-bold text-success">Registration Complete!</h1>
-              <p className="text-gray-600">
+              <p className="text-stone-700">
                 Thank you for registering for the Essex Therapy Dogs Fun Dog Show.
               </p>
-              <p className="text-gray-600">
+              <p className="text-stone-700">
                 A confirmation has been sent to <strong>{ownerEmail}</strong>.
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-stone-600">
                 You can retrieve your registration anytime by entering your email on our website.
               </p>
-              <div className="flex gap-4 justify-center mt-4">
+              <div className="flex flex-wrap gap-4 justify-center mt-4">
                 <Link href="/">
                   <Button variant="flat">Back to Home</Button>
                 </Link>
                 <Link href="/register/retrieve">
                   <Button color="primary">View My Registration</Button>
                 </Link>
+                {(retrievalToken || owner?.retrieval_token) && (
+                  <Button
+                    variant="bordered"
+                    onPress={() => {
+                      const t = retrievalToken ?? owner?.retrieval_token;
+                      if (!t) return;
+                      window.open(
+                        `/api/pdf/registration-forms?token=${encodeURIComponent(t)}`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                    }}
+                  >
+                    Print all my registration forms
+                  </Button>
+                )}
               </div>
             </CardBody>
           </Card>
@@ -250,7 +274,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12">
+    <main className="bg-cream-100 py-12">
       <div className="container mx-auto px-4">
         <div className="mb-8">
           <Link href="/">
@@ -263,7 +287,7 @@ export default function RegisterPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">Register Your Dog</h1>
-            <p className="text-gray-600">
+            <p className="text-stone-700">
               Sign up for the Essex Therapy Dogs Fun Dog Show
             </p>
           </div>
@@ -276,7 +300,7 @@ export default function RegisterPage() {
               className="h-2"
               aria-label="Registration progress"
             />
-            <div className="flex justify-between mt-2 text-sm text-gray-500">
+            <div className="flex justify-between mt-2 text-sm text-stone-600">
               <span className={step === "owner" ? "text-primary font-medium" : ""}>
                 Your Details
               </span>
@@ -330,7 +354,7 @@ export default function RegisterPage() {
                   <h2 className="text-2xl font-bold">
                     Select Classes for {dogs[selectingClassesForDog]?.name}
                   </h2>
-                  <p className="text-gray-500">
+                  <p className="text-stone-600">
                     Choose which classes your dog should enter
                   </p>
                 </div>
@@ -340,11 +364,11 @@ export default function RegisterPage() {
               </div>
 
               {classesLoading ? (
-                <p className="text-center py-8 text-gray-500">Loading classes...</p>
+                <p className="text-center py-8 text-stone-600">Loading classes...</p>
               ) : classes.length === 0 ? (
                 <Card className="text-center py-8">
                   <CardBody>
-                    <p className="text-gray-500">
+                    <p className="text-stone-600">
                       No classes are currently available. Please check back later.
                     </p>
                   </CardBody>
@@ -376,8 +400,8 @@ export default function RegisterPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold">Contact Details</h3>
-                        <p className="text-gray-600">{ownerName}</p>
-                        <p className="text-gray-500 text-sm">{ownerEmail}</p>
+                        <p className="text-stone-700">{ownerName}</p>
+                        <p className="text-stone-600 text-sm">{ownerEmail}</p>
                       </div>
                       <Button
                         size="sm"
@@ -400,7 +424,7 @@ export default function RegisterPage() {
                           <span className="text-3xl">🐕</span>
                           <div>
                             <h3 className="font-semibold text-lg">{dog.name}</h3>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-stone-600">
                               {dog.breed} • {dog.age} year{dog.age !== 1 ? "s" : ""} • {dog.sex}
                               {dog.isRescue ? " • rescue" : ""}
                             </p>
@@ -439,7 +463,7 @@ export default function RegisterPage() {
                             return (
                               <div
                                 key={classId}
-                                className="flex justify-between items-center bg-gray-50 p-2 rounded"
+                                className="flex justify-between items-center bg-cream-200/80 p-2 rounded border border-cream-300/50"
                               >
                                 <span>{c.name}</span>
                                 <div className="flex items-center gap-2">
@@ -508,7 +532,7 @@ export default function RegisterPage() {
                             .toFixed(2)}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-stone-600 mt-1">
                         Fees collected at the event
                       </p>
                     </div>

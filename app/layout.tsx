@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import { HeroUIProvider } from "@heroui/react";
 import Navigation from "@/components/Navigation";
+import SiteFooter from "@/components/SiteFooter";
+import { DevResourceErrorLogger } from "@/components/dev/DevResourceErrorLogger";
 import "./globals.css";
 
-const inter = Inter({ 
+const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-montserrat",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,10 +24,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="light">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${montserrat.variable} font-sans antialiased`}>
+        {process.env.NODE_ENV === "development" ? (
+          <DevResourceErrorLogger />
+        ) : null}
         <HeroUIProvider>
           <Navigation />
-          {children}
+          <div className="flex min-h-screen flex-col">
+            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+            <SiteFooter />
+          </div>
         </HeroUIProvider>
       </body>
     </html>

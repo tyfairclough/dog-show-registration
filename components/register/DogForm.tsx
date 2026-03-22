@@ -13,36 +13,13 @@ import {
   Switch,
 } from "@heroui/react";
 import { DogFormData } from "@/types";
+import { DOG_BREED_OPTIONS } from "@/lib/kennelClubBreeds";
 
 interface DogFormProps {
   onSubmit: (dog: DogFormData) => void;
   onCancel: () => void;
   editingDog?: DogFormData | null;
 }
-
-const commonBreeds = [
-  "Labrador Retriever",
-  "Golden Retriever",
-  "German Shepherd",
-  "Bulldog",
-  "Beagle",
-  "Poodle",
-  "Rottweiler",
-  "Yorkshire Terrier",
-  "Boxer",
-  "Dachshund",
-  "Cocker Spaniel",
-  "Shih Tzu",
-  "Border Collie",
-  "Jack Russell Terrier",
-  "Cavalier King Charles Spaniel",
-  "Staffordshire Bull Terrier",
-  "French Bulldog",
-  "Springer Spaniel",
-  "Chihuahua",
-  "Mixed Breed / Crossbreed",
-  "Other",
-];
 
 export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps) {
   const [name, setName] = useState(editingDog?.name || "");
@@ -88,7 +65,7 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
         <h2 className="text-2xl font-bold">
           {editingDog ? "Edit Dog Details" : "Add a Dog"}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-stone-600">
           Enter your dog&apos;s details to see which classes they&apos;re eligible for
         </p>
       </CardHeader>
@@ -118,7 +95,7 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
             }}
             isRequired
           >
-            {commonBreeds.map((b) => (
+            {DOG_BREED_OPTIONS.map((b) => (
               <SelectItem key={b}>{b}</SelectItem>
             ))}
           </Select>
@@ -155,7 +132,7 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
           >
             <div className="flex flex-col">
               <span>Rescue dog</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-stone-600">
                 Is this dog from a rescue shelter or charity?
               </span>
             </div>

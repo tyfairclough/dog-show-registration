@@ -45,12 +45,12 @@ export default function ClassTable({ classes, onEdit, onDelete, isLoading }: Cla
   };
 
   if (isLoading) {
-    return <div className="text-center py-8 text-gray-500">Loading classes...</div>;
+    return <div className="text-center py-8 text-stone-600">Loading classes...</div>;
   }
 
   if (classes.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-stone-600">
         No classes created yet. Create your first class to get started.
       </div>
     );
@@ -79,7 +79,7 @@ export default function ClassTable({ classes, onEdit, onDelete, isLoading }: Cla
                   className="rounded object-cover"
                 />
               ) : (
-                <div className="w-[50px] h-[50px] bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                <div className="w-[50px] h-[50px] bg-cream-200 rounded flex items-center justify-center text-stone-500 text-xs">
                   No image
                 </div>
               )}
@@ -88,7 +88,7 @@ export default function ClassTable({ classes, onEdit, onDelete, isLoading }: Cla
               <div>
                 <div className="font-medium">{dogClass.name}</div>
                 {dogClass.description && (
-                  <div className="text-sm text-gray-500 truncate max-w-[200px]">
+                  <div className="text-sm text-stone-600 truncate max-w-[200px]">
                     {dogClass.description}
                   </div>
                 )}
@@ -106,7 +106,7 @@ export default function ClassTable({ classes, onEdit, onDelete, isLoading }: Cla
             <TableCell>£{dogClass.fee.toFixed(2)}</TableCell>
             <TableCell>
               <Tooltip content={formatConstraints(dogClass)}>
-                <span className="text-sm text-gray-600 truncate max-w-[150px] block cursor-help">
+                <span className="text-sm text-stone-700 truncate max-w-[150px] block cursor-help">
                   {formatConstraints(dogClass)}
                 </span>
               </Tooltip>

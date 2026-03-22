@@ -52,7 +52,7 @@ export default function RegistrationCart({
     return (
       <Card className="text-center py-8">
         <CardBody>
-          <p className="text-gray-500 mb-4">
+          <p className="text-stone-600 mb-4">
             You haven&apos;t added any dogs yet. Add a dog to get started!
           </p>
           <Button color="primary" onPress={onAddAnotherDog}>
@@ -68,7 +68,7 @@ export default function RegistrationCart({
       <CardHeader>
         <div className="flex justify-between items-center w-full">
           <h2 className="text-xl font-bold">Your Registration</h2>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-stone-600">
             {dogs.length} dog{dogs.length !== 1 ? "s" : ""}, {totalClasses} class
             {totalClasses !== 1 ? "es" : ""}
           </span>
@@ -82,7 +82,7 @@ export default function RegistrationCart({
                 <span className="text-2xl">🐕</span>
                 <div>
                   <h3 className="font-semibold">{dog.name}</h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-stone-600">
                     {dog.breed}, {dog.age} year{dog.age !== 1 ? "s" : ""} old,{" "}
                     {dog.sex}
                     {dog.isRescue ? ", rescue" : ""}
@@ -120,7 +120,7 @@ export default function RegistrationCart({
                   return (
                     <div
                       key={classId}
-                      className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                      className="flex items-center justify-between bg-cream-200/80 p-2 rounded border border-cream-300/50"
                     >
                       <span>{dogClass.name}</span>
                       <div className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export default function RegistrationCart({
             £{calculateTotal().toFixed(2)}
           </span>
         </div>
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-stone-600 text-center">
           Registration is free. Fees are collected at the event.
         </p>
         <Button

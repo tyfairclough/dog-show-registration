@@ -3,16 +3,21 @@ import { Button } from "@heroui/react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="bg-cream-100">
       <div className="container mx-auto px-4 py-16">
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
-          <h1 className="text-5xl font-bold text-center">
-            Essex Therapy Dogs
-          </h1>
-          <h2 className="text-3xl font-semibold text-center text-primary">
+          <div className="text-center space-y-2">
+            <p className="text-sm font-medium uppercase tracking-widest text-primary-600">
+              Comfort, connection & calm
+            </p>
+            <h1 className="text-5xl font-bold text-[var(--etd-primary)]">
+              Essex Therapy Dogs
+            </h1>
+          </div>
+          <h2 className="text-3xl font-semibold text-center text-secondary-600">
             Fun Dog Show Registration
           </h2>
-          <p className="text-lg text-center text-gray-600 max-w-2xl">
+          <p className="text-lg text-center text-stone-600 max-w-2xl">
             Welcome to the registration system for the Essex Therapy Dogs Fun Dog Show.
             View available classes and register your dogs, or access the administrator portal.
           </p>
@@ -29,7 +34,7 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-            <Link href="/register/retrieve" className="text-sm text-gray-500 hover:text-primary">
+            <Link href="/register/retrieve" className="text-sm text-stone-600 hover:text-primary-600">
               Already registered? Retrieve your registration →
             </Link>
           </div>

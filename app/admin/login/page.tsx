@@ -56,11 +56,11 @@ function LoginForm() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+    <main className="flex min-h-[calc(100dvh-100px)] items-center justify-center bg-cream-100 py-12 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold">Admin Login</h1>
-          <p className="text-sm text-gray-500">Essex Therapy Dogs - Back Office</p>
+          <p className="text-sm text-stone-600">Essex Therapy Dogs - Back Office</p>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardBody className="gap-4">
@@ -97,7 +97,7 @@ function LoginForm() {
             >
               Login
             </Button>
-            <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+            <Link href="/" className="text-sm text-stone-600 hover:text-primary-700">
               ← Back to Home
             </Link>
           </CardFooter>
@@ -110,11 +110,11 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+      <main className="flex min-h-[calc(100dvh-100px)] items-center justify-center bg-cream-100 py-12 px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="flex flex-col gap-1">
             <h1 className="text-2xl font-bold">Admin Login</h1>
-            <p className="text-sm text-gray-500">Loading...</p>
+            <p className="text-sm text-stone-600">Loading...</p>
           </CardHeader>
         </Card>
       </main>

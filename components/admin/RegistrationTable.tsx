@@ -11,6 +11,7 @@ import {
   Card,
   CardHeader,
   CardBody,
+  Button,
 } from "@heroui/react";
 import { RegistrationWithDetails } from "@/types";
 
@@ -20,9 +21,11 @@ interface RegistrationTableProps {
 }
 
 interface GroupedRegistration {
+  ownerId: string;
   ownerName: string;
   ownerEmail: string;
   dogs: {
+    dogId: string;
     dogName: string;
     dogBreed: string | null;
     registrations: {
@@ -37,35 +40,36 @@ interface GroupedRegistration {
 
 export default function RegistrationTable({ registrations, isLoading }: RegistrationTableProps) {
   if (isLoading) {
-    return <div className="text-center py-8 text-gray-500">Loading registrations...</div>;
+    return <div className="text-center py-8 text-stone-600">Loading registrations...</div>;
   }
 
   if (registrations.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-stone-600">
         No registrations yet. Registrations will appear here once people start signing up.
       </div>
     );
   }
 
-  // Group registrations by owner
+  // Group registrations by owner (stable id) and dog id
   const grouped: Record<string, GroupedRegistration> = {};
-  
+
   for (const reg of registrations) {
-    const ownerKey = reg.owner_email;
-    
+    const ownerKey = reg.owner_id;
+
     if (!grouped[ownerKey]) {
       grouped[ownerKey] = {
+        ownerId: reg.owner_id,
         ownerName: reg.owner_name,
         ownerEmail: reg.owner_email,
         dogs: [],
       };
     }
-    
-    // Find or create dog entry
-    let dogEntry = grouped[ownerKey].dogs.find(d => d.dogName === reg.dog_name);
+
+    let dogEntry = grouped[ownerKey].dogs.find((d) => d.dogId === reg.dog_id);
     if (!dogEntry) {
       dogEntry = {
+        dogId: reg.dog_id,
         dogName: reg.dog_name,
         dogBreed: reg.dog_breed,
         registrations: [],
@@ -95,23 +99,51 @@ export default function RegistrationTable({ registrations, isLoading }: Registra
 
   return (
     <div className="space-y-6">
-      {groupedList.map((owner, index) => (
-        <Card key={owner.ownerEmail} className="shadow-sm">
-          <CardHeader className="bg-gray-50">
+      {groupedList.map((owner) => (
+        <Card key={owner.ownerId} className="shadow-sm">
+          <CardHeader className="bg-cream-100 flex flex-row flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold">{owner.ownerName}</h3>
-              <p className="text-sm text-gray-500">{owner.ownerEmail}</p>
+              <p className="text-sm text-stone-600">{owner.ownerEmail}</p>
             </div>
+            <Button
+              size="sm"
+              variant="flat"
+              className="shrink-0"
+              onPress={() => {
+                window.open(
+                  `/api/pdf/registration-forms?ownerId=${encodeURIComponent(owner.ownerId)}`,
+                  "_blank",
+                  "noopener,noreferrer"
+                );
+              }}
+            >
+              Print this owner&apos;s forms
+            </Button>
           </CardHeader>
           <CardBody>
-            {owner.dogs.map((dog, dogIndex) => (
-              <div key={`${owner.ownerEmail}-${dog.dogName}-${dogIndex}`} className="mb-4 last:mb-0">
-                <div className="flex items-center gap-2 mb-2">
+            {owner.dogs.map((dog) => (
+              <div key={dog.dogId} className="mb-4 last:mb-0">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-2xl">🐕</span>
                   <span className="font-medium">{dog.dogName}</span>
                   {dog.dogBreed && (
-                    <span className="text-sm text-gray-500">({dog.dogBreed})</span>
+                    <span className="text-sm text-stone-600">({dog.dogBreed})</span>
                   )}
+                  <Button
+                    size="sm"
+                    variant="bordered"
+                    className="ml-auto shrink-0"
+                    onPress={() => {
+                      window.open(
+                        `/api/pdf/registration-forms?dogId=${encodeURIComponent(dog.dogId)}`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                    }}
+                  >
+                    Print
+                  </Button>
                 </div>
                 <Table aria-label={`Registrations for ${dog.dogName}`} removeWrapper>
                   <TableHeader>
@@ -144,7 +176,7 @@ export default function RegistrationTable({ registrations, isLoading }: Registra
               </div>
             ))}
             <div className="mt-4 pt-4 border-t flex justify-between text-sm">
-              <span className="text-gray-500">
+              <span className="text-stone-600">
                 {owner.dogs.length} dog{owner.dogs.length !== 1 ? 's' : ''} registered
               </span>
               <span className="font-medium">

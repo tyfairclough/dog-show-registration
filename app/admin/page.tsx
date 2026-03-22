@@ -118,16 +118,16 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="flex min-h-[calc(100dvh-100px)] items-center justify-center bg-cream-100">
         <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-stone-700">Loading...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12">
+    <main className="bg-cream-100 py-12">
       <div className="container mx-auto px-4">
         <div className="mb-8 flex justify-between items-center">
           <Link href="/">
@@ -137,7 +137,7 @@ export default function AdminPage() {
           </Link>
           <div className="flex items-center gap-4">
             {username && (
-              <span className="text-sm text-gray-600">Logged in as: {username}</span>
+              <span className="text-sm text-stone-700">Logged in as: {username}</span>
             )}
             <Button color="danger" variant="flat" size="sm" onPress={handleLogout}>
               Logout
@@ -146,16 +146,26 @@ export default function AdminPage() {
         </div>
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl font-bold mb-2">Administrator Portal</h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-stone-700 mb-8">
             Manage classes, available spaces, and registrations for the dog show.
           </p>
           
-          <Tabs aria-label="Admin sections" color="primary">
+          <Tabs
+            aria-label="Admin sections"
+            color="primary"
+            classNames={{
+              cursor: "bg-[var(--etd-primary)]",
+            }}
+          >
             <Tab key="classes" title="Manage Classes">
               <Card className="mt-4">
                 <CardHeader className="flex justify-between items-center">
                   <h2 className="text-2xl font-semibold">Class Management</h2>
-                  <Button color="primary" onPress={handleCreateClass}>
+                  <Button
+                    variant="solid"
+                    className="bg-[var(--etd-teal)] text-white font-semibold"
+                    onPress={handleCreateClass}
+                  >
                     + Create New Class
                   </Button>
                 </CardHeader>
@@ -171,17 +181,46 @@ export default function AdminPage() {
             </Tab>
             <Tab key="registrations" title="Manage Registrations">
               <Card className="mt-4">
-                <CardHeader className="flex justify-between items-center">
+                <CardHeader className="flex flex-wrap justify-between items-center gap-3">
                   <h2 className="text-2xl font-semibold">Registration Management</h2>
-                  <Button
-                    variant="flat"
-                    onPress={() => {
-                      fetchRegistrations();
-                      fetchClasses();
-                    }}
-                  >
-                    Refresh
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="bordered"
+                      size="sm"
+                      onPress={() => {
+                        window.open(
+                          "/api/pdf/registration-forms?mode=blank",
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                      }}
+                    >
+                      Print blank form
+                    </Button>
+                    <Button
+                      variant="bordered"
+                      size="sm"
+                      onPress={() => {
+                        window.open(
+                          "/api/pdf/registration-forms?mode=all",
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                      }}
+                    >
+                      Print all registrations
+                    </Button>
+                    <Button
+                      variant="flat"
+                      size="sm"
+                      onPress={() => {
+                        fetchRegistrations();
+                        fetchClasses();
+                      }}
+                    >
+                      Refresh
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardBody>
                   <RegistrationTable

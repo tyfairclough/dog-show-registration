@@ -110,7 +110,7 @@ function RetrieveContent() {
 
   if (data) {
     return (
-      <main className="min-h-screen bg-gray-50 py-12">
+      <main className="bg-cream-100 py-12">
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="mb-8">
             <Link href="/">
@@ -123,7 +123,7 @@ function RetrieveContent() {
           <Card>
             <CardHeader className="flex flex-col items-start gap-1">
               <h1 className="text-2xl font-bold">Your Registration</h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-stone-600">
                 {data.owner.name} • {data.owner.email}
               </p>
             </CardHeader>
@@ -135,7 +135,7 @@ function RetrieveContent() {
                     <div>
                       <h3 className="font-semibold">{dogData.dogName}</h3>
                       {dogData.dogBreed && (
-                        <span className="text-sm text-gray-500">{dogData.dogBreed}</span>
+                        <span className="text-sm text-stone-600">{dogData.dogBreed}</span>
                       )}
                     </div>
                   </div>
@@ -143,7 +143,7 @@ function RetrieveContent() {
                     {dogData.registrations.map((reg) => (
                       <div
                         key={reg.id}
-                        className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                        className="flex items-center justify-between bg-cream-200/80 p-2 rounded border border-cream-300/50"
                       >
                         <span>{reg.class_name}</span>
                         <div className="flex items-center gap-2">
@@ -169,15 +169,28 @@ function RetrieveContent() {
                 </span>
               </div>
             </CardBody>
-            <CardFooter className="flex gap-4">
-              <Link href="/register" className="flex-1">
+            <CardFooter className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button
+                variant="bordered"
+                className="w-full sm:flex-1 sm:min-w-[200px]"
+                onPress={() => {
+                  window.open(
+                    `/api/pdf/registration-forms?token=${encodeURIComponent(data.owner.retrieval_token)}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }}
+              >
+                Print all my registration forms
+              </Button>
+              <Link href="/register" className="w-full sm:flex-1 sm:min-w-[200px]">
                 <Button variant="flat" className="w-full">
                   Add More Dogs
                 </Button>
               </Link>
               <Button
                 color="primary"
-                className="flex-1"
+                className="w-full sm:flex-1 sm:min-w-[200px]"
                 onPress={() => {
                   setData(null);
                   setEmail("");
@@ -193,7 +206,7 @@ function RetrieveContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12">
+    <main className="bg-cream-100 py-12">
       <div className="container mx-auto px-4 max-w-md">
         <div className="mb-8">
           <Link href="/">
@@ -206,7 +219,7 @@ function RetrieveContent() {
         <Card>
           <CardHeader className="flex flex-col items-start gap-1">
             <h1 className="text-2xl font-bold">Retrieve Your Registration</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-stone-600">
               Enter the email you used to register
             </p>
           </CardHeader>
@@ -236,7 +249,7 @@ function RetrieveContent() {
               >
                 Find My Registration
               </Button>
-              <Link href="/register" className="text-sm text-gray-500 hover:text-gray-700">
+              <Link href="/register" className="text-sm text-stone-600 hover:text-primary-700">
                 Don&apos;t have a registration? Register now →
               </Link>
             </CardFooter>
@@ -250,8 +263,8 @@ function RetrieveContent() {
 export default function RetrievePage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <main className="flex min-h-[calc(100dvh-100px)] items-center justify-center bg-cream-100">
+        <p className="text-stone-600">Loading...</p>
       </main>
     }>
       <RetrieveContent />
