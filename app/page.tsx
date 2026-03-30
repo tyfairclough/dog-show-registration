@@ -19,18 +19,13 @@ export default function Home() {
           </h2>
           <p className="text-lg text-center text-stone-600 max-w-2xl">
             Welcome to the registration system for the Essex Therapy Dogs Fun Dog Show.
-            View available classes and register your dogs, or access the administrator portal.
+            View available classes and register your dogs.
           </p>
           <div className="flex flex-col items-center gap-4 mt-8">
             <div className="flex gap-4">
               <Link href="/register">
                 <Button color="primary" size="lg">
                   Register Your Dog
-                </Button>
-              </Link>
-              <Link href="/admin">
-                <Button color="secondary" variant="bordered" size="lg">
-                  Admin Portal
                 </Button>
               </Link>
             </div>
