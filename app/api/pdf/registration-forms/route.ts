@@ -15,7 +15,7 @@ import { join } from 'path';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const DEBUG_LOG_PATH = join(process.cwd(), 'debug-5336cf.log');
+const DEBUG_LOG_PATH = join(process.cwd(), 'debug-19f0a7.log');
 
 function writeDebugLog(payload: Record<string, unknown>) {
   const line = JSON.stringify(payload) + '\n';
@@ -24,14 +24,19 @@ function writeDebugLog(payload: Record<string, unknown>) {
   } catch {
     // ignore logging failures
   }
+  // #region agent log
   fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '5336cf',
+      'X-Debug-Session-Id': '19f0a7',
     },
-    body: line,
+    body: JSON.stringify({
+      sessionId: '19f0a7',
+      ...payload,
+    }),
   }).catch(() => {});
+  // #endregion
 }
 
 function sortedClassRows() {
@@ -111,7 +116,6 @@ export async function GET(request: NextRequest) {
 
     // #region agent log
     writeDebugLog({
-      sessionId: '5336cf',
       runId: 'pre-fix',
       hypothesisId: 'H0',
       location: 'app/api/pdf/registration-forms/route.ts:104',
@@ -248,7 +252,6 @@ export async function GET(request: NextRequest) {
 
     // #region agent log
     writeDebugLog({
-      sessionId: '5336cf',
       runId: 'pre-fix',
       hypothesisId: 'H5',
       location: 'app/api/pdf/registration-forms/route.ts:222',
@@ -256,6 +259,7 @@ export async function GET(request: NextRequest) {
       data: {
         errorName: (e as any)?.name,
         errorMessage: (e as any)?.message,
+        errorStack: (e as any)?.stack,
       },
       timestamp: Date.now(),
     });

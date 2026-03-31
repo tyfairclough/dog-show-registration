@@ -3,7 +3,7 @@ console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
 import { appendFileSync } from 'fs';
 import { join } from 'path';
 
-const DEBUG_LOG_PATH = join(process.cwd(), 'debug-5336cf.log');
+const DEBUG_LOG_PATH = join(process.cwd(), 'debug-19f0a7.log');
 
 function writeDebugLog(payload: Record<string, unknown>) {
   const line = JSON.stringify(payload) + '\n';
@@ -12,14 +12,19 @@ function writeDebugLog(payload: Record<string, unknown>) {
   } catch {
     // ignore logging failures
   }
+  // #region agent log
   fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '5336cf',
+      'X-Debug-Session-Id': '19f0a7',
     },
-    body: line,
+    body: JSON.stringify({
+      sessionId: '19f0a7',
+      ...payload,
+    }),
   }).catch(() => {});
+  // #endregion
 }
 
 /**
@@ -31,7 +36,6 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
 
   // #region agent log
   writeDebugLog({
-    sessionId: '5336cf',
     runId: 'pre-fix',
     hypothesisId: 'H1',
     location: 'lib/pdf/renderPdf.ts:25',
@@ -51,7 +55,6 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
 
     // #region agent log
     writeDebugLog({
-      sessionId: '5336cf',
       runId: 'pre-fix',
       hypothesisId: 'H2',
       location: 'lib/pdf/renderPdf.ts:47',
@@ -72,7 +75,6 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
 
     // #region agent log
     writeDebugLog({
-      sessionId: '5336cf',
       runId: 'pre-fix',
       hypothesisId: 'H3',
       location: 'lib/pdf/renderPdf.ts:63',
@@ -86,12 +88,17 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
   } catch (error: any) {
     // #region agent log
     writeDebugLog({
-      sessionId: '5336cf',
       runId: 'pre-fix',
       hypothesisId: 'H4',
       location: 'lib/pdf/renderPdf.ts:77',
       message: 'renderHtmlToPdf failed',
-      data: { name: error?.name, message: error?.message },
+      data: {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        nodeVersion: process.version,
+        platform: process.platform,
+      },
       timestamp: Date.now(),
     });
     // #endregion
