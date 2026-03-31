@@ -1,43 +1,52 @@
 import puppeteer from 'puppeteer';
-import { appendFileSync, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 
-async function start() {
-  console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
-  // start your app here (listen(), etc.)
- }
- 
- start().catch(console.error);
- 
-const DEBUG_LOG_PATH = join(process.cwd(), 'debug-19f0a7.log');
-
-function writeDebugLog(payload: Record<string, unknown>) {
-  const line = JSON.stringify(payload) + '\n';
-  try {
-    appendFileSync(DEBUG_LOG_PATH, line);
-  } catch {
-    // ignore logging failures
-  }
-  // #region agent log
+// #region agent log
+function writeAgentDebugLog(payload: Record<string, unknown>) {
   fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '19f0a7',
+      'X-Debug-Session-Id': 'dbff01',
     },
     body: JSON.stringify({
-      sessionId: '19f0a7',
+      sessionId: 'dbff01',
+      timestamp: Date.now(),
       ...payload,
     }),
   }).catch(() => {});
-  // #endregion
 }
+// #endregion
+
+async function start() {
+  console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
+  // start your app here (listen(), etc.)
+}
+
+start().catch(console.error);
 
 export async function renderHtmlToPdf(html: string): Promise<Buffer> {
   const rawExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
   const hasExecutablePathEnv = Boolean(rawExecutablePath);
   const hasValidExecutablePath = hasExecutablePathEnv && rawExecutablePath ? existsSync(rawExecutablePath) : false;
   const executablePath = hasValidExecutablePath ? rawExecutablePath : undefined;
+
+  // #region agent log
+  writeAgentDebugLog({
+    runId: 'pre-fix',
+    hypothesisId: 'H-stdin-1',
+    location: 'lib/pdf/renderPdf.ts:40',
+    message: 'renderHtmlToPdf entry (Hostinger stdin investigation)',
+    data: {
+      hasExecutablePathEnv,
+      hasValidExecutablePath,
+      effectiveExecutablePath: executablePath || null,
+      nodeVersion: process.version,
+      platform: process.platform,
+    },
+  });
+  // #endregion
 
   // #region agent log
   writeDebugLog({
