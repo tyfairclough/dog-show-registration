@@ -1,0 +1,4 @@
+{"runId":"pre-fix","hypothesisId":"H0","location":"app/api/pdf/registration-forms/route.ts:104","message":"GET /api/pdf/registration-forms entry","data":{"mode":"blank","hasOwnerId":false,"hasOwnerEmail":false,"hasToken":false,"hasDogId":false,"admin":true},"timestamp":1774964210492}
+{"runId":"pre-fix","hypothesisId":"H1","location":"lib/pdf/renderPdf.ts:25","message":"renderHtmlToPdf called","data":{"hasExecutablePathEnv":true,"hasValidExecutablePath":false,"effectiveExecutablePath":null},"timestamp":1774964210493}
+{"runId":"pre-fix","hypothesisId":"H2","location":"lib/pdf/renderPdf.ts:47","message":"Puppeteer launched successfully","data":{"executablePath":null},"timestamp":1774964210788}
+{"runId":"pre-fix","hypothesisId":"H3","location":"lib/pdf/renderPdf.ts:63","message":"PDF generated successfully","data":{"pdfLength":53331},"timestamp":1774964212139}

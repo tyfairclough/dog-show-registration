@@ -1,6 +1,5 @@
 import puppeteer from 'puppeteer';
 import { existsSync } from 'fs';
-import { join } from 'path';
 
 // #region agent log
 function writeAgentDebugLog(payload: Record<string, unknown>) {
@@ -48,21 +47,6 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
   });
   // #endregion
 
-  // #region agent log
-  writeDebugLog({
-    runId: 'pre-fix',
-    hypothesisId: 'H1',
-    location: 'lib/pdf/renderPdf.ts:25',
-    message: 'renderHtmlToPdf called',
-    data: {
-      hasExecutablePathEnv,
-      hasValidExecutablePath,
-      effectiveExecutablePath: executablePath || null,
-    },
-    timestamp: Date.now(),
-  });
-  // #endregion
-
   let browser;
   try {
     browser = await puppeteer.launch({
@@ -72,13 +56,12 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
     });
 
     // #region agent log
-    writeDebugLog({
+    writeAgentDebugLog({
       runId: 'pre-fix',
       hypothesisId: 'H2',
       location: 'lib/pdf/renderPdf.ts:47',
       message: 'Puppeteer launched successfully',
       data: { executablePath: executablePath || null },
-      timestamp: Date.now(),
     });
     // #endregion
 
@@ -92,20 +75,19 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
     });
 
     // #region agent log
-    writeDebugLog({
+    writeAgentDebugLog({
       runId: 'pre-fix',
       hypothesisId: 'H3',
       location: 'lib/pdf/renderPdf.ts:63',
       message: 'PDF generated successfully',
       data: { pdfLength: (pdf as any)?.length ?? null },
-      timestamp: Date.now(),
     });
     // #endregion
 
     return Buffer.from(pdf);
   } catch (error: any) {
     // #region agent log
-    writeDebugLog({
+    writeAgentDebugLog({
       runId: 'pre-fix',
       hypothesisId: 'H4',
       location: 'lib/pdf/renderPdf.ts:77',
@@ -117,7 +99,6 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
         nodeVersion: process.version,
         platform: process.platform,
       },
-      timestamp: Date.now(),
     });
     // #endregion
 
