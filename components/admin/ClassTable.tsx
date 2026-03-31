@@ -72,7 +72,11 @@ export default function ClassTable({ classes, onEdit, onDelete, isLoading }: Cla
             <TableCell>
               {dogClass.image_square ? (
                 <Image
-                  src={dogClass.image_square}
+                  src={
+                    dogClass.image_square.startsWith("/uploads/")
+                      ? `/api/class-image?path=${encodeURIComponent(dogClass.image_square)}`
+                      : dogClass.image_square
+                  }
                   alt={dogClass.name}
                   width={50}
                   height={50}

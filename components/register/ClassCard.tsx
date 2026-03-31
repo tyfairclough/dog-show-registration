@@ -64,6 +64,11 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
   const { eligible, reason } = checkEligibility(dogClass, dog);
   const spotsLeft = dogClass.max_capacity - dogClass.current_registrations;
 
+  const imageSrc =
+    dogClass.image_square && dogClass.image_square.startsWith("/uploads/")
+      ? `/api/class-image?path=${encodeURIComponent(dogClass.image_square)}`
+      : dogClass.image_square || undefined;
+
   // #region agent log
   try {
     if (dogClass.image_square) {
@@ -105,9 +110,9 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
       onPress={eligible ? onToggle : undefined}
     >
       <CardBody className="flex flex-row gap-4">
-        {dogClass.image_square ? (
+        {imageSrc ? (
           <Image
-            src={dogClass.image_square}
+            src={imageSrc}
             alt={dogClass.name}
             width={80}
             height={80}
