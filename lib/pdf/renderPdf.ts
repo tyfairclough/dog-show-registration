@@ -1,8 +1,14 @@
 import puppeteer from 'puppeteer';
-console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
 import { appendFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
+async function start() {
+  console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
+  // start your app here (listen(), etc.)
+ }
+ 
+ start().catch(console.error);
+ 
 const DEBUG_LOG_PATH = join(process.cwd(), 'debug-19f0a7.log');
 
 function writeDebugLog(payload: Record<string, unknown>) {
