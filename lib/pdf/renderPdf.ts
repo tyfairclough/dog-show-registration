@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
 import { appendFileSync } from 'fs';
 import { join } from 'path';
 
