@@ -9,9 +9,30 @@ import { SESSION_COOKIE_NAME, verifySession } from '@/lib/auth';
 import { buildRegistrationFormsHtml, RegistrationFormPageInput } from '@/lib/pdf/registrationFormHtml';
 import { renderHtmlToPdf } from '@/lib/pdf/renderPdf';
 import type { Dog, DogClass, Owner } from '@/types';
+import { appendFileSync } from 'fs';
+import { join } from 'path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const DEBUG_LOG_PATH = join(process.cwd(), 'debug-5336cf.log');
+
+function writeDebugLog(payload: Record<string, unknown>) {
+  const line = JSON.stringify(payload) + '\n';
+  try {
+    appendFileSync(DEBUG_LOG_PATH, line);
+  } catch {
+    // ignore logging failures
+  }
+  fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': '5336cf',
+    },
+    body: line,
+  }).catch(() => {});
+}
 
 function sortedClassRows() {
   const classes = classOperations.getAll() as DogClass[];
@@ -87,6 +108,25 @@ export async function GET(request: NextRequest) {
 
     const admin = await isAdminRequest(request);
     const classRows = sortedClassRows();
+
+    // #region agent log
+    writeDebugLog({
+      sessionId: '5336cf',
+      runId: 'pre-fix',
+      hypothesisId: 'H0',
+      location: 'app/api/pdf/registration-forms/route.ts:104',
+      message: 'GET /api/pdf/registration-forms entry',
+      data: {
+        mode,
+        hasOwnerId: Boolean(ownerIdParam),
+        hasOwnerEmail: Boolean(ownerEmailParam),
+        hasToken: Boolean(tokenParam),
+        hasDogId: Boolean(dogIdParam),
+        admin,
+      },
+      timestamp: Date.now(),
+    });
+    // #endregion
 
     if (mode === 'blank') {
       if (!admin) {
@@ -205,6 +245,22 @@ export async function GET(request: NextRequest) {
     });
   } catch (e) {
     console.error('PDF generation failed');
+
+    // #region agent log
+    writeDebugLog({
+      sessionId: '5336cf',
+      runId: 'pre-fix',
+      hypothesisId: 'H5',
+      location: 'app/api/pdf/registration-forms/route.ts:222',
+      message: 'GET /api/pdf/registration-forms threw error',
+      data: {
+        errorName: (e as any)?.name,
+        errorMessage: (e as any)?.message,
+      },
+      timestamp: Date.now(),
+    });
+    // #endregion
+
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }
 }
