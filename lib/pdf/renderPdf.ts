@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 console.log('PUPPETEER_EXECUTABLE:', puppeteer.executablePath());
-import { appendFileSync } from 'fs';
+import { appendFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const DEBUG_LOG_PATH = join(process.cwd(), 'debug-19f0a7.log');
@@ -27,12 +27,11 @@ function writeDebugLog(payload: Record<string, unknown>) {
   // #endregion
 }
 
-/**
- * Renders HTML to a PDF buffer (A4, print backgrounds).
- * Set PUPPETEER_EXECUTABLE_PATH in production if Chromium is not bundled.
- */
 export async function renderHtmlToPdf(html: string): Promise<Buffer> {
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+  const rawExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+  const hasExecutablePathEnv = Boolean(rawExecutablePath);
+  const hasValidExecutablePath = hasExecutablePathEnv && rawExecutablePath ? existsSync(rawExecutablePath) : false;
+  const executablePath = hasValidExecutablePath ? rawExecutablePath : undefined;
 
   // #region agent log
   writeDebugLog({
@@ -40,7 +39,11 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
     hypothesisId: 'H1',
     location: 'lib/pdf/renderPdf.ts:25',
     message: 'renderHtmlToPdf called',
-    data: { hasExecutablePathEnv: Boolean(process.env.PUPPETEER_EXECUTABLE_PATH) },
+    data: {
+      hasExecutablePathEnv,
+      hasValidExecutablePath,
+      effectiveExecutablePath: executablePath || null,
+    },
     timestamp: Date.now(),
   });
   // #endregion
