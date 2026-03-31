@@ -64,6 +64,34 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
   const { eligible, reason } = checkEligibility(dogClass, dog);
   const spotsLeft = dogClass.max_capacity - dogClass.current_registrations;
 
+  // #region agent log
+  try {
+    if (dogClass.image_square) {
+      fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': '31ef0b',
+        },
+        body: JSON.stringify({
+          sessionId: '31ef0b',
+          runId: 'pre-fix',
+          hypothesisId: 'H5',
+          location: 'components/register/ClassCard.tsx:render',
+          message: 'ClassCard rendering image',
+          data: {
+            classId: dogClass.id,
+            imageSquare: dogClass.image_square,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+  } catch {
+    // ignore logging errors
+  }
+  // #endregion
+
   return (
     <Card
       className={`transition-all ${

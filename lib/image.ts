@@ -34,13 +34,45 @@ export interface ImagePaths {
  */
 export async function processImage(buffer: Buffer, originalName: string): Promise<ImagePaths> {
   ensureUploadDir();
-  
+
   const id = generateId();
   const ext = path.extname(originalName).toLowerCase() || '.jpg';
   const baseName = `${id}`;
 
-  // Process original (resize to max dimensions, maintain aspect ratio)
   const originalPath = `/uploads/${baseName}-original${ext}`;
+  const squarePath = `/uploads/${baseName}-square${ext}`;
+  const mobilePath = `/uploads/${baseName}-mobile${ext}`;
+
+  // #region agent log
+  try {
+    fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '31ef0b',
+      },
+      body: JSON.stringify({
+        sessionId: '31ef0b',
+        runId: 'pre-fix',
+        hypothesisId: 'H1',
+        location: 'lib/image.ts:processImage:start',
+        message: 'processImage called',
+        data: {
+          uploadDir: UPLOAD_DIR,
+          originalName,
+          originalPath,
+          squarePath,
+          mobilePath,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  } catch {
+    // ignore logging errors
+  }
+  // #endregion
+
+  // Process original (resize to max dimensions, maintain aspect ratio)
   await sharp(buffer)
     .resize(DIMENSIONS.original.width, DIMENSIONS.original.height, {
       fit: 'inside',
@@ -50,7 +82,6 @@ export async function processImage(buffer: Buffer, originalName: string): Promis
     .toFile(path.join(UPLOAD_DIR, `${baseName}-original${ext}`));
 
   // Process square crop (center crop)
-  const squarePath = `/uploads/${baseName}-square${ext}`;
   await sharp(buffer)
     .resize(DIMENSIONS.square.width, DIMENSIONS.square.height, {
       fit: 'cover',
@@ -60,7 +91,6 @@ export async function processImage(buffer: Buffer, originalName: string): Promis
     .toFile(path.join(UPLOAD_DIR, `${baseName}-square${ext}`));
 
   // Process mobile crop (9:16 vertical)
-  const mobilePath = `/uploads/${baseName}-mobile${ext}`;
   await sharp(buffer)
     .resize(DIMENSIONS.mobile.width, DIMENSIONS.mobile.height, {
       fit: 'cover',
@@ -68,6 +98,33 @@ export async function processImage(buffer: Buffer, originalName: string): Promis
     })
     .jpeg({ quality: 80 })
     .toFile(path.join(UPLOAD_DIR, `${baseName}-mobile${ext}`));
+
+  // #region agent log
+  try {
+    fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '31ef0b',
+      },
+      body: JSON.stringify({
+        sessionId: '31ef0b',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location: 'lib/image.ts:processImage:end',
+        message: 'processImage finished',
+        data: {
+          originalPath,
+          squarePath,
+          mobilePath,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  } catch {
+    // ignore logging errors
+  }
+  // #endregion
 
   return {
     original: originalPath,

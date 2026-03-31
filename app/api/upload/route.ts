@@ -6,6 +6,34 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
+    // #region agent log
+    try {
+      fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': '31ef0b',
+        },
+        body: JSON.stringify({
+          sessionId: '31ef0b',
+          runId: 'pre-fix',
+          hypothesisId: 'H3',
+          location: 'app/api/upload/route.ts:POST:start',
+          message: 'Upload POST received',
+          data: {
+            hasFile: !!file,
+            fileName: file?.name,
+            fileType: file?.type,
+            fileSize: file?.size,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    } catch {
+      // ignore logging errors
+    }
+    // #endregion
+
     if (!file) {
       return NextResponse.json(
         { error: 'No file uploaded' },
@@ -43,6 +71,32 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Upload error:', error);
+
+    // #region agent log
+    try {
+      fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': '31ef0b',
+        },
+        body: JSON.stringify({
+          sessionId: '31ef0b',
+          runId: 'pre-fix',
+          hypothesisId: 'H4',
+          location: 'app/api/upload/route.ts:POST:error',
+          message: 'Upload POST error',
+          data: {
+            error: (error as Error)?.message ?? 'unknown',
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    } catch {
+      // ignore logging errors
+    }
+    // #endregion
+
     return NextResponse.json(
       { error: 'Failed to process image' },
       { status: 500 }
