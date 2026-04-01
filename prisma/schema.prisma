@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Class {
+  id                     String         @id @db.Char(36)
+  name                   String
+  description            String?
+  max_capacity           Int            @default(20)
+  current_registrations  Int            @default(0)
+  fee                    Decimal        @db.Decimal(10, 2)
+  image_original         String?
+  image_square           String?
+  image_mobile           String?
+  allowed_breeds         String?
+  breed_restriction_mode String         @default("allow")
+  allowed_sex            String?
+  min_age                Int?
+  max_age                Int?
+  rescue_only            Int            @default(0)
+  created_at             DateTime       @default(now())
+
+  registrations          Registration[]
+
+  @@map("classes")
+}
+
+model Owner {
+  id              String   @id @db.Char(36)
+  name            String
+  email           String   @unique
+  retrieval_token String?  @unique
+  created_at      DateTime @default(now())
+
+  dogs            Dog[]
+
+  @@map("owners")
+}
+
+model Dog {
+  id         String   @id @db.Char(36)
+  owner_id   String
+  name       String
+  breed      String?
+  age        Int?
+  sex        String?
+  is_rescue  Int      @default(0)
+  created_at DateTime @default(now())
+
+  owner          Owner         @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  registrations  Registration[]
+
+  @@index([owner_id], name: "idx_dogs_owner")
+  @@map("dogs")
+}
+
+model Registration {
+  id         String   @id @db.Char(36)
+  dog_id     String
+  class_id   String
+  status     String   @default("pending")
+  created_at DateTime @default(now())
+
+  dog   Dog   @relation(fields: [dog_id], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [class_id], references: [id], onDelete: Cascade)
+
+  @@unique([dog_id, class_id], name: "registrations_dog_id_class_id_key")
+  @@index([dog_id], name: "idx_registrations_dog")
+  @@index([class_id], name: "idx_registrations_class")
+  @@map("registrations")
+}
+

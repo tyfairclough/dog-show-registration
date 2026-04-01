@@ -5,7 +5,7 @@ import { CreateRegistrationRequest } from '@/types';
 // GET all registrations with details
 export async function GET() {
   try {
-    const registrations = registrationOperations.getAll();
+    const registrations = await registrationOperations.getAll();
     return NextResponse.json(registrations);
   } catch (error) {
     console.error('Error fetching registrations:', error);

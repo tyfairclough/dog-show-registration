@@ -9,9 +9,9 @@ const JWT_SECRET = new TextEncoder().encode(
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // Admin credentials (should be in environment variables)
-export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'ty.fairclough@gmail.com';
-// Password hash for 'max123' - hardcoded temporarily for testing
-export const ADMIN_PASSWORD_HASH = '$2b$10$ZXUjnwBeBerKqRRqnrprjuGNQUoHhWuPIqOy1ya1Gxh4yGawT.r6q';
+export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'etd';
+// Password hash for 'dogshow26!' - generated via scripts/generate-password-hash.js
+export const ADMIN_PASSWORD_HASH = '$2b$10$9Km/ENM/EPjfXLQQiLFb8.WQNa0q68a4K1VOyARUNiGWZv3/4UUMC';
 
 // Hash password function (run this once to generate the hash)
 export async function hashPassword(password: string): Promise<string> {

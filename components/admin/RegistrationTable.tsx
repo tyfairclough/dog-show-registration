@@ -39,6 +39,33 @@ interface GroupedRegistration {
 }
 
 export default function RegistrationTable({ registrations, isLoading }: RegistrationTableProps) {
+  // #region agent log
+  fetch('http://127.0.0.1:7633/ingest/496538ca-312e-46af-92d8-12ee3f2190b8', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': 'a31452',
+    },
+    body: JSON.stringify({
+      sessionId: 'a31452',
+      runId: 'pre-fix',
+      hypothesisId: 'H1',
+      location: 'components/admin/RegistrationTable.tsx:41',
+      message: 'RegistrationTable props snapshot',
+      data: {
+        isLoading,
+        registrationsIsArray: Array.isArray(registrations),
+        registrationsType: typeof registrations,
+        registrationsKeys:
+          registrations && typeof registrations === 'object'
+            ? Object.keys(registrations as any)
+            : null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion agent log
+
   if (isLoading) {
     return <div className="text-center py-8 text-stone-600">Loading registrations...</div>;
   }

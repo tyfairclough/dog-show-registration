@@ -1,45 +1,26 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
-
-// Database file path
-const DB_PATH = path.join(process.cwd(), 'data', 'dogshow.db');
-
-// Ensure data directory exists
-const dataDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// Create database connection
-const db = new Database(DB_PATH);
-
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
-
-// Initialize schema
-const schemaPath = path.join(process.cwd(), 'lib', 'schema.sql');
-if (fs.existsSync(schemaPath)) {
-  const schema = fs.readFileSync(schemaPath, 'utf-8');
-  db.exec(schema);
-}
+import crypto from 'crypto';
+import prisma from './prisma';
 
 // Helper function to generate UUID
 export function generateId(): string {
   return crypto.randomUUID();
 }
 
-// Class operations
+// Class operations (Prisma-backed)
 export const classOperations = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM classes ORDER BY created_at DESC').all();
+  getAll: async () => {
+    return prisma.class.findMany({
+      orderBy: { created_at: 'desc' },
+    });
   },
 
-  getById: (id: string) => {
-    return db.prepare('SELECT * FROM classes WHERE id = ?').get(id);
+  getById: async (id: string) => {
+    return prisma.class.findUnique({
+      where: { id },
+    });
   },
 
-  create: (data: {
+  create: async (data: {
     name: string;
     description?: string;
     maxCapacity: number;
@@ -55,146 +36,176 @@ export const classOperations = {
     rescueOnly: boolean;
   }) => {
     const id = generateId();
-    const stmt = db.prepare(`
-      INSERT INTO classes (id, name, description, max_capacity, fee, image_original, image_square, image_mobile, allowed_breeds, breed_restriction_mode, allowed_sex, min_age, max_age, rescue_only)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-      id,
-      data.name,
-      data.description || null,
-      data.maxCapacity,
-      data.fee,
-      data.imageOriginal || null,
-      data.imageSquare || null,
-      data.imageMobile || null,
-      data.allowedBreeds || null,
-      data.breedRestrictionMode || 'allow',
-      data.allowedSex || null,
-      data.minAge || null,
-      data.maxAge || null,
-      data.rescueOnly ? 1 : 0
-    );
+
+    await prisma.class.create({
+      data: {
+        id,
+        name: data.name,
+        description: data.description ?? null,
+        max_capacity: data.maxCapacity,
+        fee: data.fee,
+        image_original: data.imageOriginal ?? null,
+        image_square: data.imageSquare ?? null,
+        image_mobile: data.imageMobile ?? null,
+        allowed_breeds: data.allowedBreeds ?? null,
+        breed_restriction_mode: data.breedRestrictionMode ?? 'allow',
+        allowed_sex: data.allowedSex ?? null,
+        min_age: data.minAge ?? null,
+        max_age: data.maxAge ?? null,
+        rescue_only: data.rescueOnly ? 1 : 0,
+      },
+    });
+
     return classOperations.getById(id);
   },
 
-  update: (id: string, data: Partial<{
-    name: string;
-    description: string;
-    maxCapacity: number;
-    fee: number;
-    imageOriginal: string;
-    imageSquare: string;
-    imageMobile: string;
-    allowedBreeds: string;
-    breedRestrictionMode: 'allow' | 'exclude';
-    allowedSex: string;
-    minAge: number;
-    maxAge: number;
-    rescueOnly: boolean;
-  }>) => {
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+  update: async (
+    id: string,
+    data: Partial<{
+      name: string;
+      description: string;
+      maxCapacity: number;
+      fee: number;
+      imageOriginal: string;
+      imageSquare: string;
+      imageMobile: string;
+      allowedBreeds: string;
+      breedRestrictionMode: 'allow' | 'exclude';
+      allowedSex: string;
+      minAge: number;
+      maxAge: number;
+      rescueOnly: boolean;
+    }>
+  ) => {
+    const updateData: Record<string, string | number | null> = {};
 
-    if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
-    if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
-    if (data.maxCapacity !== undefined) { fields.push('max_capacity = ?'); values.push(data.maxCapacity); }
-    if (data.fee !== undefined) { fields.push('fee = ?'); values.push(data.fee); }
-    if (data.imageOriginal !== undefined) { fields.push('image_original = ?'); values.push(data.imageOriginal); }
-    if (data.imageSquare !== undefined) { fields.push('image_square = ?'); values.push(data.imageSquare); }
-    if (data.imageMobile !== undefined) { fields.push('image_mobile = ?'); values.push(data.imageMobile); }
-    if (data.allowedBreeds !== undefined) { fields.push('allowed_breeds = ?'); values.push(data.allowedBreeds); }
-    if (data.breedRestrictionMode !== undefined) { fields.push('breed_restriction_mode = ?'); values.push(data.breedRestrictionMode); }
-    if (data.allowedSex !== undefined) { fields.push('allowed_sex = ?'); values.push(data.allowedSex); }
-    if (data.minAge !== undefined) { fields.push('min_age = ?'); values.push(data.minAge); }
-    if (data.maxAge !== undefined) { fields.push('max_age = ?'); values.push(data.maxAge); }
-    if (data.rescueOnly !== undefined) { fields.push('rescue_only = ?'); values.push(data.rescueOnly ? 1 : 0); }
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.maxCapacity !== undefined) updateData.max_capacity = data.maxCapacity;
+    if (data.fee !== undefined) updateData.fee = data.fee;
+    if (data.imageOriginal !== undefined) updateData.image_original = data.imageOriginal;
+    if (data.imageSquare !== undefined) updateData.image_square = data.imageSquare;
+    if (data.imageMobile !== undefined) updateData.image_mobile = data.imageMobile;
+    if (data.allowedBreeds !== undefined) updateData.allowed_breeds = data.allowedBreeds;
+    if (data.breedRestrictionMode !== undefined)
+      updateData.breed_restriction_mode = data.breedRestrictionMode;
+    if (data.allowedSex !== undefined) updateData.allowed_sex = data.allowedSex;
+    if (data.minAge !== undefined) updateData.min_age = data.minAge;
+    if (data.maxAge !== undefined) updateData.max_age = data.maxAge;
+    if (data.rescueOnly !== undefined) updateData.rescue_only = data.rescueOnly ? 1 : 0;
 
-    if (fields.length === 0) return classOperations.getById(id);
+    if (Object.keys(updateData).length === 0) {
+      return classOperations.getById(id);
+    }
 
-    values.push(id);
-    const stmt = db.prepare(`UPDATE classes SET ${fields.join(', ')} WHERE id = ?`);
-    stmt.run(...values);
+    await prisma.class.update({
+      where: { id },
+      data: updateData,
+    });
     return classOperations.getById(id);
   },
 
-  delete: (id: string) => {
-    const stmt = db.prepare('DELETE FROM classes WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: string) => {
+    return prisma.class.delete({
+      where: { id },
+    });
   },
 
-  updateRegistrationCount: (classId: string) => {
-    const stmt = db.prepare(`
-      UPDATE classes 
-      SET current_registrations = (
-        SELECT COUNT(*) FROM registrations WHERE class_id = ? AND status != 'cancelled'
-      )
-      WHERE id = ?
-    `);
-    return stmt.run(classId, classId);
-  }
+  updateRegistrationCount: async (classId: string) => {
+    const count = await prisma.registration.count({
+      where: {
+        class_id: classId,
+        status: { not: 'cancelled' },
+      },
+    });
+
+    return prisma.class.update({
+      where: { id: classId },
+      data: { current_registrations: count },
+    });
+  },
 };
 
-// Owner operations
+// Owner operations (Prisma-backed)
 export const ownerOperations = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM owners ORDER BY created_at DESC').all();
+  getAll: async () => {
+    return prisma.owner.findMany({
+      orderBy: { created_at: 'desc' },
+    });
   },
 
-  getById: (id: string) => {
-    return db.prepare('SELECT * FROM owners WHERE id = ?').get(id);
+  getById: async (id: string) => {
+    return prisma.owner.findUnique({
+      where: { id },
+    });
   },
 
-  getByEmail: (email: string) => {
-    return db.prepare('SELECT * FROM owners WHERE email = ?').get(email);
+  getByEmail: async (email: string) => {
+    return prisma.owner.findUnique({
+      where: { email: email.toLowerCase() },
+    });
   },
 
-  getByToken: (token: string) => {
-    return db.prepare('SELECT * FROM owners WHERE retrieval_token = ?').get(token);
+  getByToken: async (token: string) => {
+    return prisma.owner.findUnique({
+      where: { retrieval_token: token },
+    });
   },
 
-  create: (data: { name: string; email: string }) => {
+  create: async (data: { name: string; email: string }) => {
     const id = generateId();
     const retrievalToken = generateId();
-    const stmt = db.prepare(`
-      INSERT INTO owners (id, name, email, retrieval_token)
-      VALUES (?, ?, ?, ?)
-    `);
-    stmt.run(id, data.name, data.email.toLowerCase(), retrievalToken);
+    await prisma.owner.create({
+      data: {
+        id,
+        name: data.name,
+        email: data.email.toLowerCase(),
+        retrieval_token: retrievalToken,
+      },
+    });
     return ownerOperations.getById(id);
   },
 
-  update: (id: string, data: { name?: string; email?: string }) => {
-    const fields: string[] = [];
-    const values: string[] = [];
+  update: async (id: string, data: { name?: string; email?: string }) => {
+    const updateData: Record<string, string> = {};
+    if (data.name) updateData.name = data.name;
+    if (data.email) updateData.email = data.email.toLowerCase();
 
-    if (data.name) { fields.push('name = ?'); values.push(data.name); }
-    if (data.email) { fields.push('email = ?'); values.push(data.email.toLowerCase()); }
+    if (Object.keys(updateData).length === 0) {
+      return ownerOperations.getById(id);
+    }
 
-    if (fields.length === 0) return ownerOperations.getById(id);
+    await prisma.owner.update({
+      where: { id },
+      data: updateData,
+    });
 
-    values.push(id);
-    const stmt = db.prepare(`UPDATE owners SET ${fields.join(', ')} WHERE id = ?`);
-    stmt.run(...values);
     return ownerOperations.getById(id);
-  }
+  },
 };
 
-// Dog operations
+// Dog operations (Prisma-backed)
 export const dogOperations = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM dogs ORDER BY created_at DESC').all();
+  getAll: async () => {
+    return prisma.dog.findMany({
+      orderBy: { created_at: 'desc' },
+    });
   },
 
-  getById: (id: string) => {
-    return db.prepare('SELECT * FROM dogs WHERE id = ?').get(id);
+  getById: async (id: string) => {
+    return prisma.dog.findUnique({
+      where: { id },
+    });
   },
 
-  getByOwnerId: (ownerId: string) => {
-    return db.prepare('SELECT * FROM dogs WHERE owner_id = ?').all(ownerId);
+  getByOwnerId: async (ownerId: string) => {
+    return prisma.dog.findMany({
+      where: { owner_id: ownerId },
+      orderBy: { created_at: 'desc' },
+    });
   },
 
-  create: (data: {
+  create: async (data: {
     ownerId: string;
     name: string;
     breed?: string;
@@ -203,145 +214,197 @@ export const dogOperations = {
     isRescue: boolean;
   }) => {
     const id = generateId();
-    const stmt = db.prepare(`
-      INSERT INTO dogs (id, owner_id, name, breed, age, sex, is_rescue)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-      id,
-      data.ownerId,
-      data.name,
-      data.breed || null,
-      data.age || null,
-      data.sex || null,
-      data.isRescue ? 1 : 0
-    );
+    await prisma.dog.create({
+      data: {
+        id,
+        owner_id: data.ownerId,
+        name: data.name,
+        breed: data.breed ?? null,
+        age: data.age ?? null,
+        sex: data.sex ?? null,
+        is_rescue: data.isRescue ? 1 : 0,
+      },
+    });
     return dogOperations.getById(id);
   },
 
-  update: (id: string, data: Partial<{
-    name: string;
-    breed: string;
-    age: number;
-    sex: string;
-    isRescue: boolean;
-  }>) => {
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+  update: async (
+    id: string,
+    data: Partial<{
+      name: string;
+      breed: string;
+      age: number;
+      sex: string;
+      isRescue: boolean;
+    }>
+  ) => {
+    const updateData: Record<string, string | number | null> = {};
 
-    if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
-    if (data.breed !== undefined) { fields.push('breed = ?'); values.push(data.breed); }
-    if (data.age !== undefined) { fields.push('age = ?'); values.push(data.age); }
-    if (data.sex !== undefined) { fields.push('sex = ?'); values.push(data.sex); }
-    if (data.isRescue !== undefined) { fields.push('is_rescue = ?'); values.push(data.isRescue ? 1 : 0); }
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.breed !== undefined) updateData.breed = data.breed;
+    if (data.age !== undefined) updateData.age = data.age;
+    if (data.sex !== undefined) updateData.sex = data.sex;
+    if (data.isRescue !== undefined) updateData.is_rescue = data.isRescue ? 1 : 0;
 
-    if (fields.length === 0) return dogOperations.getById(id);
+    if (Object.keys(updateData).length === 0) {
+      return dogOperations.getById(id);
+    }
 
-    values.push(id);
-    const stmt = db.prepare(`UPDATE dogs SET ${fields.join(', ')} WHERE id = ?`);
-    stmt.run(...values);
+    await prisma.dog.update({
+      where: { id },
+      data: updateData,
+    });
+
     return dogOperations.getById(id);
   },
 
-  delete: (id: string) => {
-    const stmt = db.prepare('DELETE FROM dogs WHERE id = ?');
-    return stmt.run(id);
-  }
+  delete: async (id: string) => {
+    return prisma.dog.delete({
+      where: { id },
+    });
+  },
 };
 
-// Registration operations
+// Registration operations (Prisma-backed)
 export const registrationOperations = {
-  getAll: () => {
-    return db.prepare(`
-      SELECT 
-        r.*,
-        o.id as owner_id,
-        d.name as dog_name,
-        d.breed as dog_breed,
-        d.age as dog_age,
-        d.sex as dog_sex,
-        d.is_rescue as dog_is_rescue,
-        o.name as owner_name,
-        o.email as owner_email,
-        c.name as class_name,
-        c.fee as class_fee
-      FROM registrations r
-      JOIN dogs d ON r.dog_id = d.id
-      JOIN owners o ON d.owner_id = o.id
-      JOIN classes c ON r.class_id = c.id
-      ORDER BY r.created_at DESC
-    `).all();
+  getAll: async () => {
+    const registrations = await prisma.registration.findMany({
+      orderBy: { created_at: 'desc' },
+      include: {
+        dog: {
+          include: {
+            owner: true,
+          },
+        },
+        class: true,
+      },
+    });
+
+    return registrations.map((r) => ({
+      id: r.id,
+      dog_id: r.dog_id,
+      class_id: r.class_id,
+      status: r.status,
+      created_at: r.created_at,
+      owner_id: r.dog.owner.id,
+      dog_name: r.dog.name,
+      dog_breed: r.dog.breed,
+      dog_age: r.dog.age,
+      dog_sex: r.dog.sex,
+      dog_is_rescue: r.dog.is_rescue,
+      owner_name: r.dog.owner.name,
+      owner_email: r.dog.owner.email,
+      class_name: r.class.name,
+      class_fee: r.class.fee,
+    }));
   },
 
-  getById: (id: string) => {
-    return db.prepare('SELECT * FROM registrations WHERE id = ?').get(id);
+  getById: async (id: string) => {
+    return prisma.registration.findUnique({
+      where: { id },
+    });
   },
 
-  getByDogId: (dogId: string) => {
-    return db.prepare(`
-      SELECT r.*, c.name as class_name, c.fee as class_fee
-      FROM registrations r
-      JOIN classes c ON r.class_id = c.id
-      WHERE r.dog_id = ?
-    `).all(dogId);
+  getByDogId: async (dogId: string) => {
+    const registrations = await prisma.registration.findMany({
+      where: { dog_id: dogId },
+      include: {
+        class: true,
+      },
+    });
+
+    return registrations.map((r) => ({
+      ...r,
+      class_name: r.class.name,
+      class_fee: r.class.fee,
+    }));
   },
 
-  getByClassId: (classId: string) => {
-    return db.prepare(`
-      SELECT r.*, d.name as dog_name, d.breed as dog_breed, o.name as owner_name
-      FROM registrations r
-      JOIN dogs d ON r.dog_id = d.id
-      JOIN owners o ON d.owner_id = o.id
-      WHERE r.class_id = ?
-    `).all(classId);
+  getByClassId: async (classId: string) => {
+    const registrations = await prisma.registration.findMany({
+      where: { class_id: classId },
+      include: {
+        dog: {
+          include: { owner: true },
+        },
+      },
+    });
+
+    return registrations.map((r) => ({
+      ...r,
+      dog_name: r.dog.name,
+      dog_breed: r.dog.breed,
+      owner_name: r.dog.owner.name,
+    }));
   },
 
-  getByOwnerId: (ownerId: string) => {
-    return db.prepare(`
-      SELECT 
-        r.*,
-        d.name as dog_name,
-        d.breed as dog_breed,
-        c.name as class_name,
-        c.fee as class_fee
-      FROM registrations r
-      JOIN dogs d ON r.dog_id = d.id
-      JOIN classes c ON r.class_id = c.id
-      WHERE d.owner_id = ?
-      ORDER BY r.created_at DESC
-    `).all(ownerId);
+  getByOwnerId: async (ownerId: string) => {
+    const registrations = await prisma.registration.findMany({
+      where: {
+        dog: {
+          owner_id: ownerId,
+        },
+      },
+      orderBy: { created_at: 'desc' },
+      include: {
+        dog: true,
+        class: true,
+      },
+    });
+
+    return registrations.map((r) => ({
+      ...r,
+      dog_name: r.dog.name,
+      dog_breed: r.dog.breed,
+      class_name: r.class.name,
+      class_fee: r.class.fee,
+    }));
   },
 
-  create: (data: { dogId: string; classId: string }) => {
+  create: async (data: { dogId: string; classId: string }) => {
     const id = generateId();
-    const stmt = db.prepare(`
-      INSERT INTO registrations (id, dog_id, class_id, status)
-      VALUES (?, ?, ?, 'confirmed')
-    `);
-    stmt.run(id, data.dogId, data.classId);
-    classOperations.updateRegistrationCount(data.classId);
+    await prisma.registration.create({
+      data: {
+        id,
+        dog_id: data.dogId,
+        class_id: data.classId,
+        status: 'confirmed',
+      },
+    });
+
+    await classOperations.updateRegistrationCount(data.classId);
     return registrationOperations.getById(id);
   },
 
-  updateStatus: (id: string, status: 'pending' | 'confirmed' | 'cancelled') => {
-    const registration = registrationOperations.getById(id) as { class_id: string } | undefined;
-    const stmt = db.prepare('UPDATE registrations SET status = ? WHERE id = ?');
-    stmt.run(status, id);
+  updateStatus: async (id: string, status: 'pending' | 'confirmed' | 'cancelled') => {
+    const registration = await registrationOperations.getById(id);
+
+    await prisma.registration.update({
+      where: { id },
+      data: { status },
+    });
+
     if (registration) {
-      classOperations.updateRegistrationCount(registration.class_id);
+      await classOperations.updateRegistrationCount((registration as any).class_id);
     }
+
     return registrationOperations.getById(id);
   },
 
-  delete: (id: string) => {
-    const registration = registrationOperations.getById(id) as { class_id: string } | undefined;
-    const stmt = db.prepare('DELETE FROM registrations WHERE id = ?');
-    const result = stmt.run(id);
+  delete: async (id: string) => {
+    const registration = await registrationOperations.getById(id);
+
+    const result = await prisma.registration.delete({
+      where: { id },
+    });
+
     if (registration) {
-      classOperations.updateRegistrationCount(registration.class_id);
+      await classOperations.updateRegistrationCount((registration as any).class_id);
     }
+
     return result;
-  }
+  },
 };
 
-export default db;
+export default prisma;
+
