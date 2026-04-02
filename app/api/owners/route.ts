@@ -10,27 +10,27 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token');
 
     if (email) {
-      const owner = ownerOperations.getByEmail(email.toLowerCase());
+      const owner = await ownerOperations.getByEmail(email.toLowerCase());
       if (!owner) {
         return NextResponse.json({ error: 'Owner not found' }, { status: 404 });
       }
       // Get dogs and registrations for this owner
-      const dogs = dogOperations.getByOwnerId((owner as Owner).id);
-      const registrations = registrationOperations.getByOwnerId((owner as Owner).id);
+      const dogs = await dogOperations.getByOwnerId((owner as Owner).id);
+      const registrations = await registrationOperations.getByOwnerId((owner as Owner).id);
       return NextResponse.json({ owner, dogs, registrations });
     }
 
     if (token) {
-      const owner = ownerOperations.getByToken(token);
+      const owner = await ownerOperations.getByToken(token);
       if (!owner) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 404 });
       }
-      const dogs = dogOperations.getByOwnerId((owner as Owner).id);
-      const registrations = registrationOperations.getByOwnerId((owner as Owner).id);
+      const dogs = await dogOperations.getByOwnerId((owner as Owner).id);
+      const registrations = await registrationOperations.getByOwnerId((owner as Owner).id);
       return NextResponse.json({ owner, dogs, registrations });
     }
 
-    const owners = ownerOperations.getAll();
+    const owners = await ownerOperations.getAll();
     return NextResponse.json(owners);
   } catch (error) {
     console.error('Error fetching owners:', error);
@@ -62,18 +62,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if owner already exists
-    const existingOwner = ownerOperations.getByEmail(body.email.toLowerCase());
+    const existingOwner = await ownerOperations.getByEmail(body.email.toLowerCase());
     if (existingOwner) {
       // Update name if different
       const owner = existingOwner as Owner;
       if (owner.name !== body.name.trim()) {
-        ownerOperations.update(owner.id, { name: body.name.trim() });
+        await ownerOperations.update(owner.id, { name: body.name.trim() });
       }
-      return NextResponse.json(ownerOperations.getById(owner.id));
+
+      return NextResponse.json(await ownerOperations.getById(owner.id));
     }
 
     // Create new owner
-    const owner = ownerOperations.create({
+    const owner = await ownerOperations.create({
       name: body.name.trim(),
       email: body.email.toLowerCase().trim(),
     });

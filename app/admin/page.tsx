@@ -58,31 +58,6 @@ export default function AdminPage() {
       const response = await fetch('/api/registrations');
       if (response.ok) {
         const data = await response.json();
-
-        // #region agent log
-        fetch('http://127.0.0.1:7633/ingest/496538ca-312e-46af-92d8-12ee3f2190b8', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Debug-Session-Id': 'a31452',
-          },
-          body: JSON.stringify({
-            sessionId: 'a31452',
-            runId: 'pre-fix',
-            hypothesisId: 'H2',
-            location: 'app/admin/page.tsx:55',
-            message: '/api/registrations response snapshot',
-            data: {
-              isArray: Array.isArray(data),
-              type: typeof data,
-              keys: data && typeof data === 'object' ? Object.keys(data as any) : null,
-              length: (data as any)?.length ?? null,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion agent log
-
         setRegistrations(data);
       }
     } catch (error) {
@@ -238,7 +213,7 @@ export default function AdminPage() {
                       size="sm"
                       onPress={() => {
                         window.open(
-                          "/api/pdf/registration-forms?mode=all",
+                          "/admin/registrations/print",
                           "_blank",
                           "noopener,noreferrer"
                         );

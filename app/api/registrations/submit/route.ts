@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get owner data
-    const owner = ownerOperations.getById(ownerId) as Owner | undefined;
+    const owner = (await ownerOperations.getById(ownerId)) as Owner | null;
     if (!owner) {
       return NextResponse.json(
         { error: 'Owner not found' },
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all dogs for this owner
-    const dogs = dogOperations.getByOwnerId(ownerId) as Dog[];
+    const dogs = (await dogOperations.getByOwnerId(ownerId)) as Dog[];
 
     // Build email data
     const emailDogs: {
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     let totalFee = 0;
 
     for (const dog of dogs) {
-      const registrations = registrationOperations.getByDogId(dog.id) as {
+      const registrations = (await registrationOperations.getByDogId(dog.id)) as {
         class_id: string;
         class_name: string;
         class_fee: number;

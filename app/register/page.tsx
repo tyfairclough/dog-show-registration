@@ -460,6 +460,10 @@ export default function RegisterPage() {
                           {dog.selectedClasses.map((classId) => {
                             const c = classes.find((cl) => cl.id === classId);
                             if (!c) return null;
+
+                            const feeNumber = typeof c.fee === "number" ? c.fee : Number(c.fee ?? 0);
+                            const formattedFee = Number.isFinite(feeNumber) ? feeNumber.toFixed(2) : "0.00";
+
                             return (
                               <div
                                 key={classId}
@@ -467,7 +471,7 @@ export default function RegisterPage() {
                               >
                                 <span>{c.name}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-primary">£{c.fee.toFixed(2)}</span>
+                                  <span className="text-primary">£{formattedFee}</span>
                                   <Button
                                     size="sm"
                                     variant="light"
@@ -519,17 +523,23 @@ export default function RegisterPage() {
                         <span>Total on the day:</span>
                         <span className="text-primary">
                           £
-                          {dogs
-                            .reduce((total, dog) => {
+                          {(() => {
+                            const total = dogs.reduce((total, dog) => {
                               return (
                                 total +
                                 dog.selectedClasses.reduce((sum, classId) => {
                                   const c = classes.find((cl) => cl.id === classId);
-                                  return sum + (c?.fee || 0);
+                                  if (!c) return sum;
+
+                                  const feeNumber =
+                                    typeof c.fee === "number" ? c.fee : Number(c.fee ?? 0);
+                                  return sum + (Number.isFinite(feeNumber) ? feeNumber : 0);
                                 }, 0)
                               );
-                            }, 0)
-                            .toFixed(2)}
+                            }, 0);
+
+                            return Number.isFinite(total) ? total.toFixed(2) : "0.00";
+                          })()}
                         </span>
                       </div>
                       <p className="text-xs text-stone-600 mt-1">

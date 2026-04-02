@@ -64,38 +64,13 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
   const { eligible, reason } = checkEligibility(dogClass, dog);
   const spotsLeft = dogClass.max_capacity - dogClass.current_registrations;
 
+  const feeNumber = typeof dogClass.fee === "number" ? dogClass.fee : Number(dogClass.fee ?? 0);
+  const formattedFee = Number.isFinite(feeNumber) ? feeNumber.toFixed(2) : "0.00";
+
   const imageSrc =
     dogClass.image_square && dogClass.image_square.startsWith("/uploads/")
       ? `/api/class-image?path=${encodeURIComponent(dogClass.image_square)}`
       : dogClass.image_square || undefined;
-
-  // #region agent log
-  try {
-    if (dogClass.image_square) {
-      fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': '31ef0b',
-        },
-        body: JSON.stringify({
-          sessionId: '31ef0b',
-          runId: 'pre-fix',
-          hypothesisId: 'H5',
-          location: 'components/register/ClassCard.tsx:render',
-          message: 'ClassCard rendering image',
-          data: {
-            classId: dogClass.id,
-            imageSquare: dogClass.image_square,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-  } catch {
-    // ignore logging errors
-  }
-  // #endregion
 
   return (
     <Card
@@ -143,7 +118,7 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
           )}
 
           <div className="flex items-center justify-between mt-3">
-            <span className="font-medium text-primary">£{dogClass.fee.toFixed(2)}</span>
+            <span className="font-medium text-primary">£{formattedFee}</span>
 
             {!eligible ? (
               <Chip size="sm" color="danger" variant="flat">
