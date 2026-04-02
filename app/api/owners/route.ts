@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ownerOperations, dogOperations, registrationOperations } from '@/lib/db';
-import { CreateOwnerRequest, Owner } from '@/types';
+import { CreateOwnerRequest } from '@/types';
 
 // GET all owners or find by email
 export async function GET(request: NextRequest) {
@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Owner not found' }, { status: 404 });
       }
       // Get dogs and registrations for this owner
-      const dogs = await dogOperations.getByOwnerId((owner as Owner).id);
-      const registrations = await registrationOperations.getByOwnerId((owner as Owner).id);
+      const dogs = await dogOperations.getByOwnerId(owner.id);
+      const registrations = await registrationOperations.getByOwnerId(owner.id);
       return NextResponse.json({ owner, dogs, registrations });
     }
 
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       if (!owner) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 404 });
       }
-      const dogs = await dogOperations.getByOwnerId((owner as Owner).id);
-      const registrations = await registrationOperations.getByOwnerId((owner as Owner).id);
+      const dogs = await dogOperations.getByOwnerId(owner.id);
+      const registrations = await registrationOperations.getByOwnerId(owner.id);
       return NextResponse.json({ owner, dogs, registrations });
     }
 
@@ -65,12 +65,11 @@ export async function POST(request: NextRequest) {
     const existingOwner = await ownerOperations.getByEmail(body.email.toLowerCase());
     if (existingOwner) {
       // Update name if different
-      const owner = existingOwner as Owner;
-      if (owner.name !== body.name.trim()) {
-        await ownerOperations.update(owner.id, { name: body.name.trim() });
+      if (existingOwner.name !== body.name.trim()) {
+        await ownerOperations.update(existingOwner.id, { name: body.name.trim() });
       }
 
-      return NextResponse.json(await ownerOperations.getById(owner.id));
+      return NextResponse.json(await ownerOperations.getById(existingOwner.id));
     }
 
     // Create new owner

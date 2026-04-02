@@ -6,9 +6,12 @@ import {
   registrationOperations,
 } from '@/lib/db';
 import { SESSION_COOKIE_NAME, verifySession } from '@/lib/auth';
-import { buildRegistrationFormsHtml, RegistrationFormPageInput } from '@/lib/pdf/registrationFormHtml';
+import {
+  buildRegistrationFormsHtml,
+  type RegistrationFormClassRow,
+  type RegistrationFormPageInput,
+} from '@/lib/pdf/registrationFormHtml';
 import { renderHtmlToPdf } from '@/lib/pdf/renderPdf';
-import type { Dog, DogClass, Owner } from '@/types';
 import { appendFileSync } from 'fs';
 import { join } from 'path';
 
@@ -34,15 +37,15 @@ function writeDebugLog(payload: Record<string, unknown>) {
   }).catch(() => {});
 }
 
-function sortedClassRows() {
-  const classes = classOperations.getAll() as DogClass[];
+async function sortedClassRows(): Promise<RegistrationFormClassRow[]> {
+  const classes = await classOperations.getAll();
   return classes
-    .map((c) => ({ id: c.id, name: c.name, fee: c.fee }))
+    .map((c) => ({ id: c.id, name: c.name, fee: Number(c.fee) }))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
-function activeClassIdsForDog(dogId: string): Set<string> {
-  const regs = registrationOperations.getByDogId(dogId) as { class_id: string; status: string }[];
+async function activeClassIdsForDog(dogId: string): Promise<Set<string>> {
+  const regs = await registrationOperations.getByDogId(dogId);
   return new Set(regs.filter((r) => r.status !== 'cancelled').map((r) => r.class_id));
 }
 
@@ -56,12 +59,19 @@ function asciiFilenameBase(name: string): string {
   return base || 'registration';
 }
 
-function pageForDog(
-  owner: Owner,
-  dog: Dog,
-  classRows: ReturnType<typeof sortedClassRows>,
+async function pageForDog(
+  owner: { name: string; email: string },
+  dog: {
+    id: string;
+    name: string;
+    breed: string | null;
+    age: number | null;
+    sex: string | null;
+    is_rescue: number;
+  },
+  classRows: RegistrationFormClassRow[],
   isBlank: boolean
-): RegistrationFormPageInput {
+): Promise<RegistrationFormPageInput> {
   return {
     owner: { name: owner.name, email: owner.email },
     dog: {
@@ -72,12 +82,12 @@ function pageForDog(
       is_rescue: dog.is_rescue,
     },
     classes: classRows,
-    selectedClassIds: activeClassIdsForDog(dog.id),
+    selectedClassIds: await activeClassIdsForDog(dog.id),
     isBlank,
   };
 }
 
-function blankPage(classRows: ReturnType<typeof sortedClassRows>): RegistrationFormPageInput {
+function blankPage(classRows: RegistrationFormClassRow[]): RegistrationFormPageInput {
   return {
     owner: null,
     dog: null,
@@ -107,7 +117,7 @@ export async function GET(request: NextRequest) {
     const dogIdParam = searchParams.get('dogId');
 
     const admin = await isAdminRequest(request);
-    const classRows = sortedClassRows();
+    const classRows = await sortedClassRows();
 
     // #region agent log
     writeDebugLog({
@@ -139,10 +149,20 @@ export async function GET(request: NextRequest) {
       if (!admin) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      const dogs = dogOperations.getAll() as Dog[];
+      const dogs = await dogOperations.getAll();
+      const ownerIds = [...new Set(dogs.map((d) => d.owner_id))];
+      const ownerList = await Promise.all(ownerIds.map((id) => ownerOperations.getById(id)));
+      const ownerById = new Map<
+        string,
+        NonNullable<Awaited<ReturnType<typeof ownerOperations.getById>>>
+      >();
+      ownerIds.forEach((id, i) => {
+        const o = ownerList[i];
+        if (o) ownerById.set(id, o);
+      });
       dogs.sort((a, b) => {
-        const oa = ownerOperations.getById(a.owner_id) as Owner | undefined;
-        const ob = ownerOperations.getById(b.owner_id) as Owner | undefined;
+        const oa = ownerById.get(a.owner_id);
+        const ob = ownerById.get(b.owner_id);
         const ownerCmp = (oa?.name || '').localeCompare(ob?.name || '', undefined, {
           sensitivity: 'base',
         });
@@ -151,9 +171,9 @@ export async function GET(request: NextRequest) {
       });
       const pages: RegistrationFormPageInput[] = [];
       for (const dog of dogs) {
-        const owner = ownerOperations.getById(dog.owner_id) as Owner | undefined;
+        const owner = ownerById.get(dog.owner_id);
         if (!owner) continue;
-        pages.push(pageForDog(owner, dog, classRows, false));
+        pages.push(await pageForDog(owner, dog, classRows, false));
       }
       if (pages.length === 0) {
         const html = buildRegistrationFormsHtml([blankPage(classRows)]);
@@ -167,18 +187,20 @@ export async function GET(request: NextRequest) {
       if (!admin) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      let owner: Owner | undefined;
+      let owner = null;
       if (ownerIdParam) {
-        owner = ownerOperations.getById(ownerIdParam) as Owner | undefined;
+        owner = await ownerOperations.getById(ownerIdParam);
       } else if (ownerEmailParam) {
-        owner = ownerOperations.getByEmail(ownerEmailParam.trim().toLowerCase()) as Owner | undefined;
+        owner = await ownerOperations.getByEmail(ownerEmailParam.trim().toLowerCase());
       }
       if (!owner) {
         return NextResponse.json({ error: 'Owner not found' }, { status: 404 });
       }
-      const dogs = dogOperations.getByOwnerId(owner.id) as Dog[];
+      const dogs = await dogOperations.getByOwnerId(owner.id);
       dogs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-      const pages = dogs.map((dog) => pageForDog(owner!, dog, classRows, false));
+      const pages = await Promise.all(
+        dogs.map((dog) => pageForDog(owner, dog, classRows, false))
+      );
       if (pages.length === 0) {
         const html = buildRegistrationFormsHtml([blankPage(classRows)]);
         pdfBuffer = await renderHtmlToPdf(html);
@@ -188,38 +210,40 @@ export async function GET(request: NextRequest) {
       }
       filename = `registration-${asciiFilenameBase(owner.name)}.pdf`;
     } else if (dogIdParam) {
-      const dog = dogOperations.getById(dogIdParam) as Dog | undefined;
+      const dog = await dogOperations.getById(dogIdParam);
       if (!dog) {
         return NextResponse.json({ error: 'Dog not found' }, { status: 404 });
       }
-      const owner = ownerOperations.getById(dog.owner_id) as Owner | undefined;
+      const owner = await ownerOperations.getById(dog.owner_id);
       if (!owner) {
         return NextResponse.json({ error: 'Owner not found' }, { status: 404 });
       }
 
       if (admin) {
-        const html = buildRegistrationFormsHtml([pageForDog(owner, dog, classRows, false)]);
+        const html = buildRegistrationFormsHtml([await pageForDog(owner, dog, classRows, false)]);
         pdfBuffer = await renderHtmlToPdf(html);
         filename = `registration-${asciiFilenameBase(dog.name)}.pdf`;
       } else if (tokenParam) {
-        const tokenOwner = ownerOperations.getByToken(tokenParam) as Owner | undefined;
+        const tokenOwner = await ownerOperations.getByToken(tokenParam);
         if (!tokenOwner || tokenOwner.id !== owner.id) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const html = buildRegistrationFormsHtml([pageForDog(owner, dog, classRows, false)]);
+        const html = buildRegistrationFormsHtml([await pageForDog(owner, dog, classRows, false)]);
         pdfBuffer = await renderHtmlToPdf(html);
         filename = `registration-${asciiFilenameBase(dog.name)}.pdf`;
       } else {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     } else if (tokenParam) {
-      const owner = ownerOperations.getByToken(tokenParam) as Owner | undefined;
+      const owner = await ownerOperations.getByToken(tokenParam);
       if (!owner) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
       }
-      const dogs = dogOperations.getByOwnerId(owner.id) as Dog[];
+      const dogs = await dogOperations.getByOwnerId(owner.id);
       dogs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-      const pages = dogs.map((dog) => pageForDog(owner, dog, classRows, false));
+      const pages = await Promise.all(
+        dogs.map((dog) => pageForDog(owner, dog, classRows, false))
+      );
       if (pages.length === 0) {
         const html = buildRegistrationFormsHtml([blankPage(classRows)]);
         pdfBuffer = await renderHtmlToPdf(html);

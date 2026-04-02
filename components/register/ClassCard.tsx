@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardBody, Button, Chip, Image } from "@heroui/react";
+import { Card, CardBody, Chip, Image } from "@heroui/react";
 import { DogClass, DogFormData } from "@/types";
 
 interface ClassCardProps {
@@ -125,13 +125,13 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
                 {reason}
               </Chip>
             ) : isSelected ? (
-              <Button size="sm" color="primary" variant="solid">
+              <span className="inline-flex items-center rounded-large bg-primary px-3 py-1 text-small font-medium text-primary-foreground">
                 ✓ Selected
-              </Button>
+              </span>
             ) : (
-              <Button size="sm" color="primary" variant="flat">
+              <span className="inline-flex items-center rounded-large bg-primary/10 px-3 py-1 text-small font-medium text-primary">
                 Select
-              </Button>
+              </span>
             )}
           </div>
         </div>
