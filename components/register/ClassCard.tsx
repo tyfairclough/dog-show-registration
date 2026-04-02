@@ -91,10 +91,10 @@ export default function ClassCard({ dogClass, dog, isSelected, onToggle }: Class
             alt={dogClass.name}
             width={80}
             height={80}
-            className="rounded-lg object-cover flex-shrink-0"
+            className="rounded-lg object-cover shrink-0"
           />
         ) : (
-          <div className="w-20 h-20 bg-cream-200 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
+          <div className="w-20 h-20 bg-cream-200 rounded-lg flex items-center justify-center text-3xl shrink-0">
             🏆
           </div>
         )}

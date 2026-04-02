@@ -20,7 +20,7 @@ export default function Navigation() {
       <NavbarBrand>
         <Link
           href="/"
-          className="flex h-full w-full items-center shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-primary rounded-md"
+          className="flex h-full w-full items-center shrink-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-primary rounded-md"
         >
           <img
             src="/brand/essex-therapy-dogs-logo-light.svg"

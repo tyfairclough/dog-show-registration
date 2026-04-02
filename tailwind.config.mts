@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss/plugin";
 import { heroui } from "@heroui/react";
 
 const config: Config = {

@@ -51,7 +51,7 @@ export default function RegistrationTable({ registrations, isLoading }: Registra
   return (
     <div className="space-y-6">
       {groupedList.map((owner) => (
-        <Card key={owner.ownerId} className="shadow-sm">
+        <Card key={owner.ownerId} className="shadow-xs">
           <CardHeader className="bg-cream-100 flex flex-row flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold">{owner.ownerName}</h3>

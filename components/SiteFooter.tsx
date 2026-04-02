@@ -23,7 +23,7 @@ export default function SiteFooter() {
                   href="https://www.onefoursix.co.uk"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-white underline decoration-white/50 underline-offset-2 transition hover:decoration-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--etd-teal)]"
+                  className="font-medium text-white underline decoration-white/50 underline-offset-2 transition hover:decoration-white focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--etd-teal)]"
                 >
                   onefoursix
                 </a>
@@ -41,14 +41,15 @@ export default function SiteFooter() {
             <div className="flex flex-col gap-4 text-sm text-white/90">
               <p>You can also find us on Facebook and Instagram</p>
               <div>
-                <Button
-                  as={Link}
-                  href="/admin"
-                  color="primary"
-                  className="font-semibold"
-                >
-                  Admin
-                </Button>
+                <Link href="/admin">
+                  <Button
+                    as="span"
+                    color="primary"
+                    className="font-semibold"
+                  >
+                    Admin
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

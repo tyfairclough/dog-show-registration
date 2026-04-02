@@ -12,35 +12,9 @@ import {
   type RegistrationFormPageInput,
 } from '@/lib/pdf/registrationFormHtml';
 import { renderHtmlToPdf } from '@/lib/pdf/renderPdf';
-import { appendFileSync } from 'fs';
-import { join } from 'path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const DEBUG_LOG_PATH = join(process.cwd(), 'debug-19f0a7.log');
-
-function writeDebugLog(payload: Record<string, unknown>) {
-  const line = JSON.stringify(payload) + '\n';
-  try {
-    appendFileSync(DEBUG_LOG_PATH, line);
-  } catch {
-    // ignore logging failures
-  }
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/5b21ff9a-408f-493c-b269-17392d0670a5', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '19f0a7',
-    },
-    body: JSON.stringify({
-      sessionId: '19f0a7',
-      ...payload,
-    }),
-  }).catch(() => {});
-  // #endregion
-}
 
 async function sortedClassRows(): Promise<RegistrationFormClassRow[]> {
   const classes = await classOperations.getAll();
@@ -123,24 +97,6 @@ export async function GET(request: NextRequest) {
 
     const admin = await isAdminRequest(request);
     const classRows = await sortedClassRows();
-
-    // #region agent log
-    writeDebugLog({
-      runId: 'pre-fix',
-      hypothesisId: 'H0',
-      location: 'app/api/pdf/registration-forms/route.ts:104',
-      message: 'GET /api/pdf/registration-forms entry',
-      data: {
-        mode,
-        hasOwnerId: Boolean(ownerIdParam),
-        hasOwnerEmail: Boolean(ownerEmailParam),
-        hasToken: Boolean(tokenParam),
-        hasDogId: Boolean(dogIdParam),
-        admin,
-      },
-      timestamp: Date.now(),
-    });
-    // #endregion
 
     if (mode === 'blank') {
       if (!admin) {
@@ -273,21 +229,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (e) {
     console.error('PDF generation failed');
-
-    // #region agent log
-    writeDebugLog({
-      runId: 'pre-fix',
-      hypothesisId: 'H5',
-      location: 'app/api/pdf/registration-forms/route.ts:222',
-      message: 'GET /api/pdf/registration-forms threw error',
-      data: {
-        errorName: (e as any)?.name,
-        errorMessage: (e as any)?.message,
-        errorStack: (e as any)?.stack,
-      },
-      timestamp: Date.now(),
-    });
-    // #endregion
 
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }
