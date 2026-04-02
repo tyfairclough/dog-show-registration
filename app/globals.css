@@ -15,3 +15,89 @@
 body {
   @apply bg-cream-100 text-stone-900 antialiased;
 }
+
+/* Print-specific styling for admin registrations print view */
+@media print {
+  /* Hide generic interactive / navigation UI if classes are used */
+  .no-print,
+  .no-print-screen,
+  button,
+  [role="button"] {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .admin-print-registrations {
+    font-family: var(--font-montserrat), system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+    color: #000000;
+    padding: 1.5cm;
+  }
+
+  .admin-print-header {
+    display: none;
+  }
+
+  .admin-print-message {
+    font-size: 11pt;
+    margin-bottom: 0.5cm;
+  }
+
+  .print-owner-record {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .print-owner-record:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .print-owner-header h2 {
+    font-size: 16pt;
+    margin: 0 0 0.1cm;
+  }
+
+  .print-owner-header p {
+    font-size: 10pt;
+    margin: 0 0 0.3cm;
+  }
+
+  .print-dog-section {
+    margin-bottom: 0.4cm;
+  }
+
+  .print-dog-heading {
+    font-size: 12pt;
+    margin: 0 0 0.2cm;
+  }
+
+  .print-dog-breed {
+    font-size: 10pt;
+  }
+
+  .print-registrations-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+
+  .print-registrations-table th,
+  .print-registrations-table td {
+    border: 1px solid #444444;
+    padding: 0.15cm 0.2cm;
+    text-align: left;
+  }
+
+  .print-registrations-table th {
+    font-weight: 600;
+  }
+
+  .print-owner-separator {
+    height: 0.5cm;
+  }
+}
+

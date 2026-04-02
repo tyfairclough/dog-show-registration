@@ -31,7 +31,18 @@ export default function AdminPage() {
       const response = await fetch('/api/classes');
       if (response.ok) {
         const data = await response.json();
-        setClasses(data);
+
+        const normalizedClasses: DogClass[] = Array.isArray(data)
+          ? data.map((dogClass: any) => {
+              const numericFee = Number(dogClass?.fee);
+              return {
+                ...dogClass,
+                fee: Number.isFinite(numericFee) ? numericFee : 0,
+              } as DogClass;
+            })
+          : [];
+
+        setClasses(normalizedClasses);
       }
     } catch (error) {
       console.error('Failed to fetch classes:', error);
@@ -202,7 +213,7 @@ export default function AdminPage() {
                       size="sm"
                       onPress={() => {
                         window.open(
-                          "/api/pdf/registration-forms?mode=all",
+                          "/admin/registrations/print",
                           "_blank",
                           "noopener,noreferrer"
                         );

@@ -5,7 +5,8 @@ import { CreateClassRequest } from '@/types';
 // GET all classes
 export async function GET() {
   try {
-    const classes = classOperations.getAll();
+    const classes = await classOperations.getAll();
+
     return NextResponse.json(classes);
   } catch (error) {
     console.error('Error fetching classes:', error);
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newClass = classOperations.create({
+    const newClass = await classOperations.create({
       name: body.name.trim(),
       description: body.description,
       maxCapacity: body.maxCapacity,
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(newClass, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating class:', error);
     return NextResponse.json(
       { error: 'Failed to create class' },

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { classOperations } from '@/lib/db';
 import { deleteImages } from '@/lib/image';
-import { DogClass } from '@/types';
 
 // GET single class
 export async function GET(
@@ -10,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const dogClass = classOperations.getById(id);
+    const dogClass = await classOperations.getById(id);
 
     if (!dogClass) {
       return NextResponse.json(
@@ -36,7 +35,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const existingClass = classOperations.getById(id) as DogClass | undefined;
+    const existingClass = await classOperations.getById(id);
 
     if (!existingClass) {
       return NextResponse.json(
@@ -78,7 +77,7 @@ export async function PUT(
       });
     }
 
-    const updatedClass = classOperations.update(id, {
+    const updatedClass = await classOperations.update(id, {
       name: body.name,
       description: body.description,
       maxCapacity: body.maxCapacity,
@@ -111,7 +110,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const existingClass = classOperations.getById(id) as DogClass | undefined;
+    const existingClass = await classOperations.getById(id);
 
     if (!existingClass) {
       return NextResponse.json(
@@ -129,7 +128,7 @@ export async function DELETE(
       });
     }
 
-    classOperations.delete(id);
+    await classOperations.delete(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

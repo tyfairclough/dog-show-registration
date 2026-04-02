@@ -14,31 +14,19 @@ import {
   Button,
 } from "@heroui/react";
 import { RegistrationWithDetails } from "@/types";
+import {
+  groupRegistrationsByOwner,
+  GroupedRegistration,
+} from "@/lib/registrationGrouping";
 
 interface RegistrationTableProps {
   registrations: RegistrationWithDetails[];
   isLoading: boolean;
 }
 
-interface GroupedRegistration {
-  ownerId: string;
-  ownerName: string;
-  ownerEmail: string;
-  dogs: {
-    dogId: string;
-    dogName: string;
-    dogBreed: string | null;
-    registrations: {
-      id: string;
-      className: string;
-      classFee: number;
-      status: string;
-      createdAt: string;
-    }[];
-  }[];
-}
-
 export default function RegistrationTable({ registrations, isLoading }: RegistrationTableProps) {
+  const groupedList: GroupedRegistration[] = groupRegistrationsByOwner(registrations);
+
   if (isLoading) {
     return <div className="text-center py-8 text-stone-600">Loading registrations...</div>;
   }
@@ -50,43 +38,6 @@ export default function RegistrationTable({ registrations, isLoading }: Registra
       </div>
     );
   }
-
-  // Group registrations by owner (stable id) and dog id
-  const grouped: Record<string, GroupedRegistration> = {};
-
-  for (const reg of registrations) {
-    const ownerKey = reg.owner_id;
-
-    if (!grouped[ownerKey]) {
-      grouped[ownerKey] = {
-        ownerId: reg.owner_id,
-        ownerName: reg.owner_name,
-        ownerEmail: reg.owner_email,
-        dogs: [],
-      };
-    }
-
-    let dogEntry = grouped[ownerKey].dogs.find((d) => d.dogId === reg.dog_id);
-    if (!dogEntry) {
-      dogEntry = {
-        dogId: reg.dog_id,
-        dogName: reg.dog_name,
-        dogBreed: reg.dog_breed,
-        registrations: [],
-      };
-      grouped[ownerKey].dogs.push(dogEntry);
-    }
-    
-    dogEntry.registrations.push({
-      id: reg.id,
-      className: reg.class_name,
-      classFee: reg.class_fee,
-      status: reg.status,
-      createdAt: reg.created_at,
-    });
-  }
-
-  const groupedList = Object.values(grouped);
 
   const getStatusColor = (status: string) => {
     switch (status) {

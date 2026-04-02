@@ -39,7 +39,9 @@ export default function RegistrationCart({
       for (const classId of dog.selectedClasses) {
         const dogClass = getClassById(classId);
         if (dogClass) {
-          total += dogClass.fee;
+          const feeNumber =
+            typeof dogClass.fee === "number" ? dogClass.fee : Number(dogClass.fee ?? 0);
+          total += Number.isFinite(feeNumber) ? feeNumber : 0;
         }
       }
     }
@@ -117,6 +119,15 @@ export default function RegistrationCart({
                 {dog.selectedClasses.map((classId) => {
                   const dogClass = getClassById(classId);
                   if (!dogClass) return null;
+
+                  const feeNumber =
+                    typeof dogClass.fee === "number"
+                      ? dogClass.fee
+                      : Number(dogClass.fee ?? 0);
+                  const formattedFee = Number.isFinite(feeNumber)
+                    ? feeNumber.toFixed(2)
+                    : "0.00";
+
                   return (
                     <div
                       key={classId}
@@ -125,7 +136,7 @@ export default function RegistrationCart({
                       <span>{dogClass.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-primary font-medium">
-                          £{dogClass.fee.toFixed(2)}
+                          £{formattedFee}
                         </span>
                         <Button
                           size="sm"

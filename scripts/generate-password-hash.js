@@ -3,7 +3,7 @@
 
 const bcrypt = require('bcryptjs');
 
-const password = 'charityMax123';
+const password = 'dogshow26!';
 
 bcrypt.hash(password, 10).then((hash) => {
   console.log('Password hash generated:');

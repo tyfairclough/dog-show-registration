@@ -9,11 +9,11 @@ export async function GET(request: NextRequest) {
     const ownerId = searchParams.get('ownerId');
 
     if (ownerId) {
-      const dogs = dogOperations.getByOwnerId(ownerId);
+      const dogs = await dogOperations.getByOwnerId(ownerId);
       return NextResponse.json(dogs);
     }
 
-    const dogs = dogOperations.getAll();
+    const dogs = await dogOperations.getAll();
     return NextResponse.json(dogs);
   } catch (error) {
     console.error('Error fetching dogs:', error);
@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
   try {
     const body: CreateDogRequest = await request.json();
 
-    // Validate required fields
     if (!body.ownerId) {
       return NextResponse.json(
         { error: 'Owner ID is required' },
@@ -44,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dog = dogOperations.create({
+    const dog = await dogOperations.create({
       ownerId: body.ownerId,
       name: body.name.trim(),
       breed: body.breed,

@@ -36,13 +36,22 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 interface RegistrationEmailData {
   ownerName: string;
   ownerEmail: string;
-  retrievalToken: string;
+  retrievalToken: string | null;
   dogs: {
     name: string;
     breed: string;
-    classes: { name: string; fee: number }[];
+    classes: { name: string; fee: number | string }[];
   }[];
-  totalFee: number;
+  totalFee: number | string;
+}
+
+function toCurrencyNumber(value: number | string): number {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCurrency(value: number | string): string {
+  return toCurrencyNumber(value).toFixed(2);
 }
 
 /**
@@ -50,7 +59,7 @@ interface RegistrationEmailData {
  */
 export async function sendRegistrationConfirmation(data: RegistrationEmailData): Promise<boolean> {
   const dogsList = data.dogs.map(dog => {
-    const classesList = dog.classes.map(c => `      - ${c.name} (£${c.fee.toFixed(2)})`).join('\n');
+    const classesList = dog.classes.map(c => `      - ${c.name} (£${formatCurrency(c.fee)})`).join('\n');
     return `    🐕 ${dog.name} (${dog.breed})\n${classesList}`;
   }).join('\n\n');
 
@@ -74,23 +83,27 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData):
     <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 10px 0;">
       <h3 style="margin: 0 0 10px 0;">🐕 ${dog.name} (${dog.breed})</h3>
       <ul style="margin: 0; padding-left: 20px;">
-        ${dog.classes.map(c => `<li>${c.name} - £${c.fee.toFixed(2)}</li>`).join('')}
+        ${dog.classes.map(c => `<li>${c.name} - £${formatCurrency(c.fee)}</li>`).join('')}
       </ul>
     </div>
   `).join('')}
   
   <p style="font-size: 18px; font-weight: bold;">
-    Total to pay on the day: £${data.totalFee.toFixed(2)}
+    Total to pay on the day: £${formatCurrency(data.totalFee)}
   </p>
   
   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
   
   <h3>Retrieve Your Registration</h3>
-  <p>You can view or modify your registration at any time by visiting:</p>
+  ${
+    data.retrievalToken
+      ? `<p>You can view or modify your registration at any time by visiting:</p>
   <p><a href="http://localhost:3000/register/retrieve?token=${data.retrievalToken}" style="color: #2563eb;">
     View My Registration
   </a></p>
-  
+  `
+      : ''
+  }
   <p>Or enter your email address (${data.ownerEmail}) on our website.</p>
   
   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
@@ -113,15 +126,19 @@ Thank you for registering for the Essex Therapy Dogs Fun Dog Show!
 Your Registration Details:
 ${dogsList}
 
-Total to pay on the day: £${data.totalFee.toFixed(2)}
+Total to pay on the day: £${formatCurrency(data.totalFee)}
 
 ---
 
 Retrieve Your Registration:
-You can view your registration at any time by visiting:
+${
+    data.retrievalToken
+      ? `You can view your registration at any time by visiting:
 http://localhost:3000/register/retrieve?token=${data.retrievalToken}
 
-Or enter your email address (${data.ownerEmail}) on our website.
+`
+      : ''
+  }Or enter your email address (${data.ownerEmail}) on our website.
   `;
 
   return sendEmail({

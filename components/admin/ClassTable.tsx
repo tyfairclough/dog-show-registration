@@ -107,7 +107,9 @@ export default function ClassTable({ classes, onEdit, onDelete, isLoading }: Cla
                 {dogClass.current_registrations} / {dogClass.max_capacity}
               </Chip>
             </TableCell>
-            <TableCell>£{dogClass.fee.toFixed(2)}</TableCell>
+            <TableCell>
+              £{(Number.isFinite(Number(dogClass.fee)) ? Number(dogClass.fee) : 0).toFixed(2)}
+            </TableCell>
             <TableCell>
               <Tooltip content={formatConstraints(dogClass)}>
                 <span className="text-sm text-stone-700 truncate max-w-[150px] block cursor-help">
