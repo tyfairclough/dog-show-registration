@@ -8,11 +8,19 @@ const JWT_SECRET = new TextEncoder().encode(
 
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-// Admin credentials (set ADMIN_PASSWORD_HASH in production — generate via scripts/generate-password-hash.js)
-export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'etd';
-export const ADMIN_PASSWORD_HASH =
-  process.env.ADMIN_PASSWORD_HASH ||
-  '$2b$10$9Km/ENM/EPjfXLQQiLFb8.WQNa0q68a4K1VOyARUNiGWZv3/4UUMC';
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  return value;
+}
+
+// Intentionally fail fast so auth never falls back to hardcoded credentials.
+export const ADMIN_USERNAME = getRequiredEnv('ADMIN_USERNAME');
+export const ADMIN_PASSWORD_HASH = getRequiredEnv('ADMIN_PASSWORD_HASH');
 
 // Hash password function (run this once to generate the hash)
 export async function hashPassword(password: string): Promise<string> {
