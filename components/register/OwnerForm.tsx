@@ -10,7 +10,12 @@ interface OwnerFormProps {
 }
 
 export default function OwnerForm({ onSubmit, initialName = "", initialEmail = "" }: OwnerFormProps) {
-  const [name, setName] = useState(initialName);
+  const nameParts = initialName.trim().split(/\s+/).filter(Boolean);
+  const initialFirstName = nameParts[0] || "";
+  const initialLastName = nameParts.slice(1).join(" ");
+
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [lastName, setLastName] = useState(initialLastName);
   const [email, setEmail] = useState(initialEmail);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,8 +24,8 @@ export default function OwnerForm({ onSubmit, initialName = "", initialEmail = "
     e.preventDefault();
     setError("");
 
-    if (!name.trim()) {
-      setError("Please enter your name");
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Please enter your first and last name");
       return;
     }
 
@@ -31,7 +36,8 @@ export default function OwnerForm({ onSubmit, initialName = "", initialEmail = "
 
     setIsLoading(true);
     try {
-      await onSubmit(name.trim(), email.trim().toLowerCase());
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      await onSubmit(fullName, email.trim().toLowerCase());
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -54,14 +60,26 @@ export default function OwnerForm({ onSubmit, initialName = "", initialEmail = "
               {error}
             </div>
           )}
-          <Input
-            label="Your Name"
-            placeholder="e.g., John Smith"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            isRequired
-            autoComplete="name"
-          />
+          <div className="flex gap-3">
+            <Input
+              label="First Name"
+              placeholder="e.g., John"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              isRequired
+              autoComplete="given-name"
+              className="w-1/2"
+            />
+            <Input
+              label="Last Name"
+              placeholder="e.g., Smith"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              isRequired
+              autoComplete="family-name"
+              className="w-1/2"
+            />
+          </div>
           <Input
             label="Email Address"
             placeholder="e.g., john@example.com"

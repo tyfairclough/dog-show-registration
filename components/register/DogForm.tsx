@@ -8,6 +8,8 @@ import {
   CardFooter,
   Button,
   Input,
+  Autocomplete,
+  AutocompleteItem,
   Select,
   SelectItem,
   Switch,
@@ -25,7 +27,7 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
   const [name, setName] = useState(editingDog?.name || "");
   const [breed, setBreed] = useState(editingDog?.breed || "");
   const [age, setAge] = useState(editingDog?.age?.toString() || "");
-  const [sex, setSex] = useState<"male" | "female">(editingDog?.sex || "male");
+  const [sex, setSex] = useState<"male" | "female" | "">(editingDog?.sex || "");
   const [isRescue, setIsRescue] = useState(editingDog?.isRescue || false);
   const [error, setError] = useState("");
 
@@ -43,8 +45,19 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
       return;
     }
 
-    if (!age || parseInt(age) < 0 || parseInt(age) > 25) {
-      setError("Please enter a valid age (0-25 years)");
+    if (!/^\d+$/.test(age)) {
+      setError("Please enter a whole number age (0-20 years)");
+      return;
+    }
+
+    const parsedAge = parseInt(age, 10);
+    if (parsedAge < 0 || parsedAge > 20) {
+      setError("Please enter a valid age (0-20 years)");
+      return;
+    }
+
+    if (!sex) {
+      setError("Please select your dog's sex");
       return;
     }
 
@@ -52,7 +65,7 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
       id: editingDog?.id,
       name: name.trim(),
       breed,
-      age: parseInt(age),
+      age: parsedAge,
       sex,
       isRescue,
       selectedClasses: editingDog?.selectedClasses || [],
@@ -85,39 +98,40 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
             isRequired
           />
 
-          <Select
+          <Autocomplete
             label="Breed"
-            placeholder="Select a breed"
-            selectedKeys={breed ? new Set([breed]) : new Set()}
-            onSelectionChange={(keys) => {
-              const arr = Array.from(keys) as string[];
-              setBreed(arr[0] || "");
-            }}
+            placeholder="Start typing to find a breed"
+            inputValue={breed}
+            onInputChange={setBreed}
+            selectedKey={breed || null}
+            onSelectionChange={(key) => setBreed((key as string) || breed)}
             isRequired
           >
             {DOG_BREED_OPTIONS.map((b) => (
-              <SelectItem key={b}>{b}</SelectItem>
+              <AutocompleteItem key={b}>{b}</AutocompleteItem>
             ))}
-          </Select>
+          </Autocomplete>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="number"
               label="Age (years)"
-              placeholder="e.g., 3"
+              placeholder="Enter 0 for puppies"
               value={age}
               onChange={(e) => setAge(e.target.value)}
               min={0}
-              max={25}
+              max={20}
+              step={1}
               isRequired
             />
 
             <Select
               label="Sex"
-              selectedKeys={new Set([sex])}
+              placeholder="Please select"
+              selectedKeys={sex ? new Set([sex]) : new Set()}
               onSelectionChange={(keys) => {
                 const arr = Array.from(keys) as string[];
-                setSex((arr[0] as "male" | "female") || "male");
+                setSex((arr[0] as "male" | "female") || "");
               }}
               isRequired
             >

@@ -233,7 +233,7 @@ export const KENNEL_CLUB_BREEDS: readonly string[] = [
 
 /** Full dropdown list: KC breeds, then non-pedigree options. */
 export const DOG_BREED_OPTIONS: readonly string[] = [
-  ...KENNEL_CLUB_BREEDS,
   "Mixed breed",
   "Other",
+  ...KENNEL_CLUB_BREEDS,
 ];
