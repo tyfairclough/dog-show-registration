@@ -6,6 +6,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { username, password } = body;
 
+    const normalizedAdminUsername = ADMIN_USERNAME.trim();
+    const normalizedHash = ADMIN_PASSWORD_HASH.trim()
+      .replace(/^"(.*)"$/, '$1')
+      .replace(/^'(.*)'$/, '$1')
+      .replace(/\\\$/g, '$');
+
     // Validate input
     if (!username || !password) {
       return NextResponse.json(
@@ -14,16 +20,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify credentials
-    if (username !== ADMIN_USERNAME) {
+    // Verify credentials (trimmed username match for env/copy-paste edge cases)
+    if (username.trim() !== normalizedAdminUsername) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
 
-    // Verify password
-    const isValid = await verifyPassword(password, ADMIN_PASSWORD_HASH);
+    let isValid = await verifyPassword(password, ADMIN_PASSWORD_HASH);
+    if (!isValid && normalizedHash !== ADMIN_PASSWORD_HASH) {
+      isValid = await verifyPassword(password, normalizedHash);
+    }
+
     if (!isValid) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
