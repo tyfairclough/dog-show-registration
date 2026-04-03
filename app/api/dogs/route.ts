@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const fun = Boolean(body.activityFunShow);
+    const splash = Boolean(body.activitySplashPool);
+    const agility = Boolean(body.activityAgility);
+    if (!fun && !splash && !agility) {
+      return NextResponse.json(
+        { error: 'Select at least one activity for this dog' },
+        { status: 400 }
+      );
+    }
+
     const dog = await dogOperations.create({
       ownerId: body.ownerId,
       name: body.name.trim(),
@@ -50,6 +60,9 @@ export async function POST(request: NextRequest) {
       age: body.age,
       sex: body.sex,
       isRescue: body.isRescue ?? false,
+      activityFunShow: fun,
+      activitySplashPool: splash,
+      activityAgility: agility,
     });
 
     return NextResponse.json(dog, { status: 201 });

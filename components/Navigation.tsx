@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Button, Navbar, NavbarBrand, NavbarContent, NavbarItem } from "@heroui/react";
+import { Navbar, NavbarBrand } from "@heroui/react";
 
 export default function Navigation() {
   return (
@@ -31,19 +31,6 @@ export default function Navigation() {
           />
         </Link>
       </NavbarBrand>
-      <NavbarContent justify="end">
-        <NavbarItem>
-          <Link href="/register">
-            <Button
-              as="span"
-              variant="solid"
-              className="bg-[var(--etd-teal)] text-white font-semibold"
-            >
-              Register Your Dog
-            </Button>
-          </Link>
-        </NavbarItem>
-      </NavbarContent>
     </Navbar>
   );
 }

@@ -16,6 +16,10 @@ export function checkEligibility(dogClass: DogClass, dog: DogFormData): { eligib
     return { eligible: false, reason: "Class is full" };
   }
 
+  if (dog.breed === undefined || dog.sex === undefined || dog.age === undefined) {
+    return { eligible: false, reason: "Complete dog details to check eligibility" };
+  }
+
   // Check breed constraint
   if (dogClass.allowed_breeds) {
     const breedList = dogClass.allowed_breeds.split(",").map(b => b.trim().toLowerCase());

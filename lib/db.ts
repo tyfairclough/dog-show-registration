@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import type { AdminOwnerWithDogs } from '@/types';
 import prisma from './prisma';
 
 // Helper function to generate UUID
@@ -182,6 +183,14 @@ export const ownerOperations = {
 
     return ownerOperations.getById(id);
   },
+
+  markActivityWaiverAccepted: async (ownerId: string) => {
+    await prisma.owner.update({
+      where: { id: ownerId },
+      data: { activity_waiver_accepted_at: new Date() },
+    });
+    return ownerOperations.getById(ownerId);
+  },
 };
 
 // Dog operations (Prisma-backed)
@@ -211,7 +220,10 @@ export const dogOperations = {
     breed?: string;
     age?: number;
     sex?: string;
-    isRescue: boolean;
+    isRescue?: boolean;
+    activityFunShow?: boolean;
+    activitySplashPool?: boolean;
+    activityAgility?: boolean;
   }) => {
     const id = generateId();
     await prisma.dog.create({
@@ -223,6 +235,9 @@ export const dogOperations = {
         age: data.age ?? null,
         sex: data.sex ?? null,
         is_rescue: data.isRescue ? 1 : 0,
+        activity_fun_show: data.activityFunShow ? 1 : 0,
+        activity_splash_pool: data.activitySplashPool ? 1 : 0,
+        activity_agility: data.activityAgility ? 1 : 0,
       },
     });
     return dogOperations.getById(id);
@@ -236,6 +251,9 @@ export const dogOperations = {
       age: number;
       sex: string;
       isRescue: boolean;
+      activityFunShow: boolean;
+      activitySplashPool: boolean;
+      activityAgility: boolean;
     }>
   ) => {
     const updateData: Record<string, string | number | null> = {};
@@ -245,6 +263,12 @@ export const dogOperations = {
     if (data.age !== undefined) updateData.age = data.age;
     if (data.sex !== undefined) updateData.sex = data.sex;
     if (data.isRescue !== undefined) updateData.is_rescue = data.isRescue ? 1 : 0;
+    if (data.activityFunShow !== undefined)
+      updateData.activity_fun_show = data.activityFunShow ? 1 : 0;
+    if (data.activitySplashPool !== undefined)
+      updateData.activity_splash_pool = data.activitySplashPool ? 1 : 0;
+    if (data.activityAgility !== undefined)
+      updateData.activity_agility = data.activityAgility ? 1 : 0;
 
     if (Object.keys(updateData).length === 0) {
       return dogOperations.getById(id);
@@ -267,6 +291,66 @@ export const dogOperations = {
 
 // Registration operations (Prisma-backed)
 export const registrationOperations = {
+  /** All dogs with owners and class rows — for admin UI (includes dogs with no classes). */
+  getAdminGroupedByOwner: async (): Promise<AdminOwnerWithDogs[]> => {
+    const dogs = await prisma.dog.findMany({
+      orderBy: { created_at: 'asc' },
+      include: {
+        owner: true,
+        registrations: {
+          include: { class: true },
+          orderBy: { created_at: 'desc' },
+        },
+      },
+    });
+
+    const byOwner = new Map<
+      string,
+      {
+        ownerName: string;
+        ownerEmail: string;
+        dogs: AdminOwnerWithDogs['dogs'];
+      }
+    >();
+
+    for (const dog of dogs) {
+      let bucket = byOwner.get(dog.owner_id);
+      if (!bucket) {
+        bucket = {
+          ownerName: dog.owner.name,
+          ownerEmail: dog.owner.email,
+          dogs: [],
+        };
+        byOwner.set(dog.owner_id, bucket);
+      }
+
+      bucket.dogs.push({
+        dogId: dog.id,
+        dogName: dog.name,
+        dogBreed: dog.breed,
+        activityFunShow: dog.activity_fun_show === 1,
+        activitySplashPool: dog.activity_splash_pool === 1,
+        activityAgility: dog.activity_agility === 1,
+        registrations: dog.registrations.map((r) => ({
+          id: r.id,
+          className: r.class.name,
+          classFee: Number(r.class.fee),
+          status: r.status,
+          createdAt: r.created_at.toISOString(),
+        })),
+      });
+    }
+
+    return [...byOwner.entries()]
+      .sort((a, b) => a[1].ownerName.localeCompare(b[1].ownerName))
+      .map(([ownerId, v]) => ({
+        ownerId,
+        ownerName: v.ownerName,
+        ownerEmail: v.ownerEmail,
+        dogs: v.dogs,
+      }));
+  },
+
   getAll: async () => {
     const registrations = await prisma.registration.findMany({
       orderBy: { created_at: 'desc' },

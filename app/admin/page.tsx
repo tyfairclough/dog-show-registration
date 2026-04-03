@@ -7,7 +7,7 @@ import Link from "next/link";
 import ClassTable from "@/components/admin/ClassTable";
 import ClassForm from "@/components/admin/ClassForm";
 import RegistrationTable from "@/components/admin/RegistrationTable";
-import { DogClass, CreateClassRequest, RegistrationWithDetails } from "@/types";
+import { DogClass, CreateClassRequest, AdminOwnerWithDogs } from "@/types";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function AdminPage() {
   const [editingClass, setEditingClass] = useState<DogClass | null>(null);
   
   // Registration management state
-  const [registrations, setRegistrations] = useState<RegistrationWithDetails[]>([]);
+  const [registrationOwners, setRegistrationOwners] = useState<AdminOwnerWithDogs[]>([]);
   const [registrationsLoading, setRegistrationsLoading] = useState(true);
 
   // Fetch classes
@@ -57,8 +57,8 @@ export default function AdminPage() {
     try {
       const response = await fetch('/api/registrations');
       if (response.ok) {
-        const data = await response.json();
-        setRegistrations(data);
+        const data = (await response.json()) as AdminOwnerWithDogs[];
+        setRegistrationOwners(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error('Failed to fetch registrations:', error);
@@ -235,7 +235,7 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardBody>
                   <RegistrationTable
-                    registrations={registrations}
+                    owners={registrationOwners}
                     isLoading={registrationsLoading}
                   />
                 </CardBody>

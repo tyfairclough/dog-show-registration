@@ -30,29 +30,33 @@ model Class {
 }
 
 model Owner {
-  id              String   @id @db.Char(36)
-  name            String
-  email           String   @unique
-  retrieval_token String?  @unique
-  created_at      DateTime @default(now())
+  id                           String    @id @db.Char(36)
+  name                         String
+  email                        String    @unique
+  retrieval_token              String?   @unique
+  activity_waiver_accepted_at  DateTime?
+  created_at                   DateTime  @default(now())
 
-  dogs            Dog[]
+  dogs Dog[]
 
   @@map("owners")
 }
 
 model Dog {
-  id         String   @id @db.Char(36)
-  owner_id   String
-  name       String
-  breed      String?
-  age        Int?
-  sex        String?
-  is_rescue  Int      @default(0)
-  created_at DateTime @default(now())
+  id                    String   @id @db.Char(36)
+  owner_id              String
+  name                  String
+  breed                 String?
+  age                   Int?
+  sex                   String?
+  is_rescue             Int      @default(0)
+  activity_fun_show     Int      @default(0)
+  activity_splash_pool  Int      @default(0)
+  activity_agility      Int      @default(0)
+  created_at            DateTime @default(now())
 
-  owner          Owner         @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-  registrations  Registration[]
+  owner         Owner          @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  registrations Registration[]
 
   @@index([owner_id], name: "idx_dogs_owner")
   @@map("dogs")

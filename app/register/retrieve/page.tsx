@@ -30,6 +30,14 @@ interface RegistrationData {
   }[];
 }
 
+function activityLabels(dog: Dog): string[] {
+  const parts: string[] = [];
+  if (dog.activity_fun_show === 1) parts.push("Fun dog show");
+  if (dog.activity_splash_pool === 1) parts.push("Splash pool");
+  if (dog.activity_agility === 1) parts.push("Agility");
+  return parts;
+}
+
 function RetrieveContent() {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get("token");
@@ -91,19 +99,6 @@ function RetrieveContent() {
     }
   };
 
-  // Group registrations by dog
-  const groupedByDog = data?.registrations.reduce((acc, reg) => {
-    if (!acc[reg.dog_id]) {
-      acc[reg.dog_id] = {
-        dogName: reg.dog_name,
-        dogBreed: reg.dog_breed,
-        registrations: [],
-      };
-    }
-    acc[reg.dog_id].registrations.push(reg);
-    return acc;
-  }, {} as Record<string, { dogName: string; dogBreed: string | null; registrations: typeof data.registrations }>);
-
   const totalFee = data?.registrations
     .filter(r => r.status !== 'cancelled')
     .reduce((sum, r) => sum + r.class_fee, 0) || 0;
@@ -128,39 +123,62 @@ function RetrieveContent() {
               </p>
             </CardHeader>
             <CardBody className="gap-6">
-              {groupedByDog && Object.entries(groupedByDog).map(([dogId, dogData]) => (
-                <div key={dogId} className="border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">🐕</span>
-                    <div>
-                      <h3 className="font-semibold">{dogData.dogName}</h3>
-                      {dogData.dogBreed && (
-                        <span className="text-sm text-stone-600">{dogData.dogBreed}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {dogData.registrations.map((reg) => (
-                      <div
-                        key={reg.id}
-                        className="flex items-center justify-between bg-cream-200/80 p-2 rounded border border-cream-300/50"
-                      >
-                        <span>{reg.class_name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary">£{reg.class_fee.toFixed(2)}</span>
-                          <Chip
-                            size="sm"
-                            color={reg.status === 'confirmed' ? 'success' : reg.status === 'cancelled' ? 'danger' : 'warning'}
-                            variant="flat"
-                          >
-                            {reg.status}
-                          </Chip>
-                        </div>
+              {data.dogs.map((dog) => {
+                const regs = data.registrations.filter((r) => r.dog_id === dog.id);
+                return (
+                  <div key={dog.id} className="border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">🐕</span>
+                      <div>
+                        <h3 className="font-semibold">{dog.name}</h3>
+                        <p className="text-sm text-stone-600">
+                          {activityLabels(dog).join(" · ")}
+                        </p>
+                        {dog.breed ? (
+                          <span className="text-sm text-stone-600 block mt-0.5">{dog.breed}</span>
+                        ) : null}
                       </div>
-                    ))}
+                    </div>
+                    {regs.length === 0 ? (
+                      <p className="text-sm text-stone-600 bg-cream-100 rounded p-2">
+                        No fun dog show class entries (splash pool / agility only, or classes pending).
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {regs.map((reg) => (
+                          <div
+                            key={reg.id}
+                            className="flex items-center justify-between bg-cream-200/80 p-2 rounded border border-cream-300/50"
+                          >
+                            <span>{reg.class_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">
+                                £
+                                {typeof reg.class_fee === "number"
+                                  ? reg.class_fee.toFixed(2)
+                                  : Number(reg.class_fee).toFixed(2)}
+                              </span>
+                              <Chip
+                                size="sm"
+                                color={
+                                  reg.status === "confirmed"
+                                    ? "success"
+                                    : reg.status === "cancelled"
+                                      ? "danger"
+                                      : "warning"
+                                }
+                                variant="flat"
+                              >
+                                {reg.status}
+                              </Chip>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               <div className="border-t pt-4 flex justify-between items-center">
                 <span className="font-medium">Total to pay on the day:</span>
@@ -173,9 +191,12 @@ function RetrieveContent() {
               <Button
                 variant="bordered"
                 className="w-full sm:flex-1 sm:min-w-[200px]"
+                isDisabled={!data.owner.retrieval_token}
                 onPress={() => {
+                  const t = data.owner.retrieval_token;
+                  if (!t) return;
                   window.open(
-                    `/api/pdf/registration-forms?token=${encodeURIComponent(data.owner.retrieval_token)}`,
+                    `/api/pdf/registration-forms?token=${encodeURIComponent(t)}`,
                     "_blank",
                     "noopener,noreferrer"
                   );

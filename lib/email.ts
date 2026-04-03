@@ -1,6 +1,5 @@
 /**
- * Email utility module
- * Currently logs emails to console - implement actual email sending later
+ * Registration and admin notification emails via Mailgun (or console fallback).
  */
 
 interface EmailOptions {
@@ -10,13 +9,39 @@ interface EmailOptions {
   text?: string;
 }
 
-/**
- * Send an email (currently just logs to console)
- * In production, integrate with a service like Resend, SendGrid, or Nodemailer
- */
-export async function sendEmail(options: EmailOptions): Promise<boolean> {
+export function getAppBaseUrl(): string {
+  const raw =
+    process.env.APP_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (process.env.VERCEL_URL?.trim()
+      ? `https://${process.env.VERCEL_URL.trim()}`
+      : '');
+  if (raw) {
+    return raw.replace(/\/+$/, '');
+  }
+  return 'http://localhost:3000';
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Old `.env.example` sample value; Mailgun returns 401 if copied into `.env.local`. */
+const LEGACY_EXAMPLE_MAILGUN_API_KEY = '956b22bbe63c992c3b169f478cddbbe3';
+
+function mailgunConfigured(): boolean {
+  return Boolean(
+    process.env.MAILGUN_API_KEY?.trim() && process.env.MAILGUN_DOMAIN?.trim()
+  );
+}
+
+function logEmailConsole(options: EmailOptions): void {
   console.log('\n========================================');
-  console.log('📧 EMAIL SENT (Console Mode)');
+  console.log('📧 EMAIL (console mode — Mailgun not configured)');
   console.log('========================================');
   console.log(`To: ${options.to}`);
   console.log(`Subject: ${options.subject}`);
@@ -29,8 +54,114 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     console.log(options.text);
   }
   console.log('========================================\n');
-  
-  return true;
+}
+
+/** US vs EU keys/domains must hit the matching API host; 401 often means wrong host. */
+function mailgunApiHosts(): string[] {
+  const region = process.env.MAILGUN_REGION?.trim().toLowerCase();
+  if (region === 'eu') return ['https://api.eu.mailgun.net'];
+  if (region === 'us') return ['https://api.mailgun.net'];
+  // Unset: try US then EU (EU accounts commonly return 401 on the US endpoint).
+  return ['https://api.mailgun.net', 'https://api.eu.mailgun.net'];
+}
+
+async function sendViaMailgun(options: EmailOptions): Promise<void> {
+  const key = process.env.MAILGUN_API_KEY!.trim();
+  if (key === LEGACY_EXAMPLE_MAILGUN_API_KEY) {
+    throw new Error(
+      'MAILGUN_API_KEY is the sample value from .env.example — set your real Mailgun private API key in .env.local (Sending → Domain → API keys).'
+    );
+  }
+  const domain = process.env.MAILGUN_DOMAIN!.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  const hosts = mailgunApiHosts();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'pre-fix',hypothesisId:'H_from_region',location:'email.ts:sendViaMailgun',message:'before Mailgun fetch',data:{hasFrom:Boolean(from),region:(process.env.MAILGUN_REGION?.trim().toLowerCase())||'unset',domainSet:domain.length>0,hostCount:hosts.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  if (!from) {
+    throw new Error('EMAIL_FROM is required when Mailgun is configured');
+  }
+
+  const body = new URLSearchParams();
+  body.set('from', from);
+  body.set('to', options.to);
+  body.set('subject', options.subject);
+  body.set('html', options.html);
+  if (options.text) {
+    body.set('text', options.text);
+  }
+
+  const auth = Buffer.from(`api:${key}`, 'utf8').toString('base64');
+  const bodyStr = body.toString();
+
+  for (let i = 0; i < hosts.length; i++) {
+    const host = hosts[i];
+    const url = `${host}/v3/${encodeURIComponent(domain)}/messages`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: bodyStr,
+    });
+
+    if (res.ok) {
+      // #region agent log
+      if (i > 0) {
+        fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'post-fix',hypothesisId:'H_region_retry_ok',location:'email.ts:sendViaMailgun',message:'Mailgun OK after alternate host',data:{attemptIndex:i,hostSuffix:host.includes('eu')?'eu':'us'},timestamp:Date.now()})}).catch(()=>{});
+      }
+      // #endregion
+      return;
+    }
+
+    const errBody = await res.text();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'post-fix',hypothesisId:'H_mailgun_http',location:'email.ts:sendViaMailgun',message:'Mailgun non-OK',data:{httpStatus:res.status,bodyPreview:errBody.slice(0,400),attemptIndex:i,willRetry401:i===0&&hosts.length>1&&res.status===401},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
+    if (i === 0 && hosts.length > 1 && res.status === 401) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'post-fix',hypothesisId:'H_region_retry',location:'email.ts:sendViaMailgun',message:'retrying Mailgun after 401',data:{nextHostSuffix:hosts[1]?.includes('eu')?'eu':'us'},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      continue;
+    }
+
+    const authHint =
+      res.status === 401
+        ? ' Verify MAILGUN_API_KEY is the private API key for this Mailgun account (401 on all tried API hosts usually means a wrong or revoked key).'
+        : '';
+    throw new Error(`Mailgun error ${res.status}: ${errBody}${authHint}`);
+  }
+}
+
+/**
+ * Deliver one email. Uses Mailgun when configured; otherwise logs to console.
+ * Throws if Mailgun returns an error.
+ */
+export async function sendEmail(options: EmailOptions): Promise<void> {
+  const mgOn = mailgunConfigured();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'pre-fix',hypothesisId:'H_config',location:'email.ts:sendEmail',message:'sendEmail branch',data:{mailgunConfigured:mgOn,hasEmailFrom:Boolean(process.env.EMAIL_FROM?.trim()),domainLen:process.env.MAILGUN_DOMAIN?.trim().length??0,keyLen:process.env.MAILGUN_API_KEY?.trim().length??0},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  if (!mgOn) {
+    logEmailConsole(options);
+    return;
+  }
+  await sendViaMailgun(options);
+}
+
+export interface RegistrationDogDetail {
+  name: string;
+  breed: string;
+  age: number | null;
+  sex: string | null;
+  isRescue: boolean;
+  activityFunShow: boolean;
+  activitySplashPool: boolean;
+  activityAgility: boolean;
+  classes: { name: string; fee: number }[];
+  otherActivities: string[];
 }
 
 interface RegistrationEmailData {
@@ -41,6 +172,7 @@ interface RegistrationEmailData {
     name: string;
     breed: string;
     classes: { name: string; fee: number | string }[];
+    otherActivities: string[];
   }[];
   totalFee: number | string;
 }
@@ -54,62 +186,115 @@ function formatCurrency(value: number | string): string {
   return toCurrencyNumber(value).toFixed(2);
 }
 
-/**
- * Send registration confirmation email
- */
-export async function sendRegistrationConfirmation(data: RegistrationEmailData): Promise<boolean> {
-  const dogsList = data.dogs.map(dog => {
-    const classesList = dog.classes.map(c => `      - ${c.name} (£${formatCurrency(c.fee)})`).join('\n');
-    return `    🐕 ${dog.name} (${dog.breed})\n${classesList}`;
-  }).join('\n\n');
+function dogEmailSectionText(
+  dog: RegistrationEmailData['dogs'][number]
+): string {
+  const lines: string[] = [`    🐕 ${dog.name} (${dog.breed})`];
+  if (dog.classes.length > 0) {
+    lines.push(
+      ...dog.classes.map((c) => `      - ${c.name} (£${formatCurrency(c.fee)})`)
+    );
+  }
+  if (dog.otherActivities.length > 0) {
+    lines.push(...dog.otherActivities.map((a) => `      - ${a}`));
+  }
+  if (dog.classes.length === 0 && dog.otherActivities.length === 0) {
+    lines.push('      - (see your online registration for details)');
+  }
+  return lines.join('\n');
+}
+
+const REGISTRANT_SUBJECT =
+  "Essex Therapy Dog's volunteer day dog registration";
+
+export async function sendRegistrationConfirmation(
+  data: RegistrationEmailData
+): Promise<void> {
+  const baseUrl = getAppBaseUrl();
+  const retrievalPath = data.retrievalToken
+    ? `${baseUrl}/register/retrieve?token=${encodeURIComponent(data.retrievalToken)}`
+    : '';
+
+  const dogsList = data.dogs.map(dogEmailSectionText).join('\n\n');
+
+  const ownerSafe = escapeHtml(data.ownerName);
+  const emailSafe = escapeHtml(data.ownerEmail);
+
+  const htmlDogs = data.dogs
+    .map((dog) => {
+      const nameSafe = escapeHtml(dog.name);
+      const breedSafe = escapeHtml(dog.breed);
+      const classesBlock =
+        dog.classes.length > 0
+          ? `<p style="margin: 0 0 6px 0; font-size: 13px; color: #4b5563;">Show classes</p>
+      <ul style="margin: 0 0 10px 0; padding-left: 20px;">
+        ${dog.classes
+          .map(
+            (c) =>
+              `<li>${escapeHtml(c.name)} - £${formatCurrency(c.fee)}</li>`
+          )
+          .join('')}
+      </ul>`
+          : '';
+      const activitiesBlock =
+        dog.otherActivities.length > 0
+          ? `<p style="margin: 0 0 6px 0; font-size: 13px; color: #4b5563;">Other activities</p>
+      <ul style="margin: 0; padding-left: 20px;">
+        ${dog.otherActivities.map((a) => `<li>${escapeHtml(a)}</li>`).join('')}
+      </ul>`
+          : '';
+      const emptyNote =
+        dog.classes.length === 0 && dog.otherActivities.length === 0
+          ? '<p style="margin:0; color:#6b7280; font-size: 14px;">See your online registration for full details.</p>'
+          : '';
+      return `
+    <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 10px 0;">
+      <h3 style="margin: 0 0 10px 0;">🐕 ${nameSafe} (${breedSafe})</h3>
+      ${classesBlock}
+      ${activitiesBlock}
+      ${emptyNote}
+    </div>`;
+    })
+    .join('');
 
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Registration Confirmation</title>
+  <title>Registration confirmation</title>
 </head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h1 style="color: #2563eb;">Registration Confirmed! 🎉</h1>
-  
-  <p>Dear ${data.ownerName},</p>
-  
-  <p>Thank you for registering for the <strong>Essex Therapy Dogs Fun Dog Show</strong>!</p>
-  
-  <h2>Your Registration Details</h2>
-  
-  ${data.dogs.map(dog => `
-    <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 10px 0;">
-      <h3 style="margin: 0 0 10px 0;">🐕 ${dog.name} (${dog.breed})</h3>
-      <ul style="margin: 0; padding-left: 20px;">
-        ${dog.classes.map(c => `<li>${c.name} - £${formatCurrency(c.fee)}</li>`).join('')}
-      </ul>
-    </div>
-  `).join('')}
-  
+  <h1 style="color: #2563eb;">Registration confirmed</h1>
+
+  <p>Dear ${ownerSafe},</p>
+
+  <p>Thank you for registering for the <strong>Essex Therapy Dogs volunteer day</strong>.</p>
+
+  <h2>Your registration details</h2>
+
+  ${htmlDogs}
+
   <p style="font-size: 18px; font-weight: bold;">
     Total to pay on the day: £${formatCurrency(data.totalFee)}
   </p>
-  
+
   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-  
-  <h3>Retrieve Your Registration</h3>
+
+  <h3>Retrieve your registration</h3>
   ${
     data.retrievalToken
-      ? `<p>You can view or modify your registration at any time by visiting:</p>
-  <p><a href="http://localhost:3000/register/retrieve?token=${data.retrievalToken}" style="color: #2563eb;">
-    View My Registration
-  </a></p>
+      ? `<p>You can view or update your registration using this link:</p>
+  <p><a href="${escapeHtml(retrievalPath)}" style="color: #2563eb;">View my registration</a></p>
   `
       : ''
   }
-  <p>Or enter your email address (${data.ownerEmail}) on our website.</p>
-  
+  <p>Or enter the email address you used (${emailSafe}) on our website.</p>
+
   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-  
+
   <p style="color: #6b7280; font-size: 12px;">
-    This is an automated email from Essex Therapy Dogs Fun Dog Show.
+    This is an automated email from Essex Therapy Dogs (volunteer day dog registration).
     Please do not reply to this email.
   </p>
 </body>
@@ -117,34 +302,157 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData):
   `;
 
   const text = `
-Registration Confirmed!
+Registration confirmed
 
 Dear ${data.ownerName},
 
-Thank you for registering for the Essex Therapy Dogs Fun Dog Show!
+Thank you for registering for the Essex Therapy Dogs volunteer day.
 
-Your Registration Details:
+Your registration details:
 ${dogsList}
 
 Total to pay on the day: £${formatCurrency(data.totalFee)}
 
 ---
 
-Retrieve Your Registration:
+Retrieve your registration:
 ${
-    data.retrievalToken
-      ? `You can view your registration at any time by visiting:
-http://localhost:3000/register/retrieve?token=${data.retrievalToken}
+  data.retrievalToken
+    ? `Open this link in your browser:
+${retrievalPath}
 
 `
-      : ''
-  }Or enter your email address (${data.ownerEmail}) on our website.
+    : ''
+}Or enter the email address you used (${data.ownerEmail}) on our website.
   `;
 
-  return sendEmail({
+  await sendEmail({
     to: data.ownerEmail,
-    subject: 'Registration Confirmed - Essex Therapy Dogs Fun Dog Show',
+    subject: REGISTRANT_SUBJECT,
     html,
     text,
+  });
+}
+
+export interface AdminRegistrationEmailData {
+  ownerName: string;
+  ownerEmail: string;
+  waiverJustAccepted: boolean;
+  dogs: RegistrationDogDetail[];
+  totalFee: number;
+  retrievalToken: string | null;
+}
+
+const ADMIN_SUBJECT = 'New volunteer day dog registration';
+
+export async function sendAdminRegistrationNotification(
+  data: AdminRegistrationEmailData
+): Promise<void> {
+  const adminTo = process.env.ADMIN_REGISTRATION_EMAIL?.trim();
+  if (!adminTo) {
+    console.warn(
+      '[email] ADMIN_REGISTRATION_EMAIL is not set; skipping admin notification'
+    );
+    return;
+  }
+
+  const baseUrl = getAppBaseUrl();
+  const retrievalPath = data.retrievalToken
+    ? `${baseUrl}/register/retrieve?token=${encodeURIComponent(data.retrievalToken)}`
+    : '';
+
+  const ownerRows = `
+    <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Name</strong></td><td style="padding:8px;border:1px solid #ccc;">${escapeHtml(data.ownerName)}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Email</strong></td><td style="padding:8px;border:1px solid #ccc;">${escapeHtml(data.ownerEmail)}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Activity waiver</strong></td><td style="padding:8px;border:1px solid #ccc;">${data.waiverJustAccepted ? 'Accepted this session (splash pool and/or agility)' : 'Not required or already on file'}</td></tr>
+    ${retrievalPath ? `<tr><td style="padding:8px;border:1px solid #ccc;"><strong>Retrieval link</strong></td><td style="padding:8px;border:1px solid #ccc;"><a href="${escapeHtml(retrievalPath)}">${escapeHtml(retrievalPath)}</a></td></tr>` : ''}
+  `;
+
+  const dogSections = data.dogs
+    .map((dog, i) => {
+      const actFun = dog.activityFunShow ? 'Yes' : 'No';
+      const actSplash = dog.activitySplashPool ? 'Yes' : 'No';
+      const actAgility = dog.activityAgility ? 'Yes' : 'No';
+      const classesRows =
+        dog.classes.length > 0
+          ? dog.classes
+              .map(
+                (c) =>
+                  `<tr><td style="padding:6px;border:1px solid #ddd;">${escapeHtml(c.name)}</td><td style="padding:6px;border:1px solid #ddd;">£${formatCurrency(c.fee)}</td></tr>`
+              )
+              .join('')
+          : `<tr><td colspan="2" style="padding:6px;border:1px solid #ddd;color:#666;">No show classes</td></tr>`;
+      const other =
+        dog.otherActivities.length > 0
+          ? escapeHtml(dog.otherActivities.join(', '))
+          : '—';
+
+      return `
+    <h3 style="margin-top:24px;">Dog ${i + 1}: ${escapeHtml(dog.name)}</h3>
+    <table style="border-collapse:collapse;width:100%;max-width:640px;margin-bottom:8px;">
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Breed</strong></td><td style="padding:8px;border:1px solid #ccc;">${escapeHtml(dog.breed)}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Age</strong></td><td style="padding:8px;border:1px solid #ccc;">${dog.age !== null && dog.age !== undefined ? escapeHtml(String(dog.age)) : '—'}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Sex</strong></td><td style="padding:8px;border:1px solid #ccc;">${dog.sex ? escapeHtml(dog.sex) : '—'}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Rescue</strong></td><td style="padding:8px;border:1px solid #ccc;">${dog.isRescue ? 'Yes' : 'No'}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Fun dog show</strong></td><td style="padding:8px;border:1px solid #ccc;">${actFun}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Splash pool</strong></td><td style="padding:8px;border:1px solid #ccc;">${actSplash}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Agility</strong></td><td style="padding:8px;border:1px solid #ccc;">${actAgility}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Other activities</strong></td><td style="padding:8px;border:1px solid #ccc;">${other}</td></tr>
+    </table>
+    <p style="margin:8px 0 4px 0;"><strong>Classes</strong></p>
+    <table style="border-collapse:collapse;width:100%;max-width:640px;">
+      <tr style="background:#f3f4f6;"><th style="padding:8px;border:1px solid #ccc;text-align:left;">Class</th><th style="padding:8px;border:1px solid #ccc;text-align:left;">Fee</th></tr>
+      ${classesRows}
+    </table>`;
+    })
+    .join('');
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${ADMIN_SUBJECT}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px;">
+  <h1 style="font-size:18px;">${ADMIN_SUBJECT}</h1>
+  <p>A new volunteer day dog registration has been submitted.</p>
+  <h2 style="font-size:16px;margin-top:20px;">Owner</h2>
+  <table style="border-collapse:collapse;width:100%;max-width:640px;">${ownerRows}</table>
+  <h2 style="font-size:16px;margin-top:20px;">Dogs and entries</h2>
+  ${dogSections}
+  <p style="margin-top:24px;font-size:16px;"><strong>Total fees (show classes): £${formatCurrency(data.totalFee)}</strong></p>
+</body>
+</html>
+  `;
+
+  const textLines: string[] = [
+    ADMIN_SUBJECT,
+    '',
+    `Owner: ${data.ownerName} <${data.ownerEmail}>`,
+    `Activity waiver: ${data.waiverJustAccepted ? 'Accepted this session' : 'Not required or already on file'}`,
+  ];
+  if (retrievalPath) {
+    textLines.push(`Retrieval: ${retrievalPath}`);
+  }
+  textLines.push('');
+  data.dogs.forEach((dog, i) => {
+    textLines.push(`Dog ${i + 1}: ${dog.name}`);
+    textLines.push(`  Breed: ${dog.breed}  Age: ${dog.age ?? '—'}  Sex: ${dog.sex ?? '—'}  Rescue: ${dog.isRescue ? 'Yes' : 'No'}`);
+    textLines.push(
+      `  Activities: fun show ${dog.activityFunShow ? 'Yes' : 'No'}, splash ${dog.activitySplashPool ? 'Yes' : 'No'}, agility ${dog.activityAgility ? 'Yes' : 'No'}`
+    );
+    dog.classes.forEach((c) => {
+      textLines.push(`  Class: ${c.name}  £${formatCurrency(c.fee)}`);
+    });
+    if (dog.otherActivities.length) {
+      textLines.push(`  Other: ${dog.otherActivities.join(', ')}`);
+    }
+    textLines.push('');
+  });
+  textLines.push(`Total fees: £${formatCurrency(data.totalFee)}`);
+
+  await sendEmail({
+    to: adminTo,
+    subject: ADMIN_SUBJECT,
+    html,
+    text: textLines.join('\n'),
   });
 }

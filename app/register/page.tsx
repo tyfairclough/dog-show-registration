@@ -1,40 +1,51 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Button, Progress, Card, CardBody } from "@heroui/react";
+import { useState, useEffect } from "react";
+import { Button, Progress, Card, CardBody, Checkbox } from "@heroui/react";
 import Link from "next/link";
 import OwnerForm from "@/components/register/OwnerForm";
 import DogForm from "@/components/register/DogForm";
 import ClassCard from "@/components/register/ClassCard";
-import RegistrationCart from "@/components/register/RegistrationCart";
 import { DogClass, DogFormData, Owner } from "@/types";
 
 type Step = "owner" | "dogs" | "classes" | "review";
 
+function dogNeedsPoolWaiver(d: DogFormData): boolean {
+  return d.activities.splashPool || d.activities.agility;
+}
+
+function anyDogNeedsWaiver(dogs: DogFormData[]): boolean {
+  return dogs.some(dogNeedsPoolWaiver);
+}
+
+function activitySummary(d: DogFormData): string[] {
+  const parts: string[] = [];
+  if (d.activities.funDogShow) parts.push("Fun dog show");
+  if (d.activities.splashPool) parts.push("Splash pool");
+  if (d.activities.agility) parts.push("Agility");
+  return parts;
+}
+
 export default function RegisterPage() {
-  // Owner state
   const [owner, setOwner] = useState<Owner | null>(null);
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
 
-  // Dogs state
   const [dogs, setDogs] = useState<DogFormData[]>([]);
   const [currentDogIndex, setCurrentDogIndex] = useState<number | null>(null);
   const [isAddingDog, setIsAddingDog] = useState(false);
 
-  // Classes state
   const [classes, setClasses] = useState<DogClass[]>([]);
   const [classesLoading, setClassesLoading] = useState(true);
   const [selectingClassesForDog, setSelectingClassesForDog] = useState<number | null>(null);
 
-  // Flow state
   const [step, setStep] = useState<Step>("owner");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [retrievalToken, setRetrievalToken] = useState<string | null>(null);
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
 
-  // Fetch classes on mount
   useEffect(() => {
     fetch("/api/classes")
       .then((res) => res.json())
@@ -48,7 +59,10 @@ export default function RegisterPage() {
       });
   }, []);
 
-  // Handle owner form submission
+  useEffect(() => {
+    setWaiverAccepted(false);
+  }, [dogs]);
+
   const handleOwnerSubmit = async (name: string, email: string) => {
     const response = await fetch("/api/owners", {
       method: "POST",
@@ -68,43 +82,47 @@ export default function RegisterPage() {
     }
   };
 
-  // Handle dog form submission
   const handleDogSubmit = (dog: DogFormData) => {
+    let nextDogs: DogFormData[];
+    let dogIndex: number;
+
     if (currentDogIndex !== null) {
-      // Editing existing dog
-      const newDogs = [...dogs];
-      newDogs[currentDogIndex] = { ...dog, id: dogs[currentDogIndex].id };
-      setDogs(newDogs);
+      nextDogs = [...dogs];
+      nextDogs[currentDogIndex] = { ...dog, id: dogs[currentDogIndex].id };
+      dogIndex = currentDogIndex;
     } else {
-      // Adding new dog
-      setDogs([...dogs, { ...dog, id: `temp-${Date.now()}` }]);
+      dogIndex = dogs.length;
+      nextDogs = [...dogs, { ...dog, id: dog.id ?? `temp-${Date.now()}` }];
     }
+
+    setDogs(nextDogs);
     setIsAddingDog(false);
     setCurrentDogIndex(null);
-    
-    // Go to class selection for this dog
-    const dogIndex = currentDogIndex ?? dogs.length;
-    setSelectingClassesForDog(dogIndex);
-    setStep("classes");
+
+    if (dog.activities.funDogShow) {
+      setSelectingClassesForDog(dogIndex);
+      setStep("classes");
+    } else {
+      setSelectingClassesForDog(null);
+      setStep("review");
+    }
   };
 
-  // Handle class toggle for a dog
   const handleClassToggle = (classId: string) => {
     if (selectingClassesForDog === null) return;
 
     const newDogs = [...dogs];
     const dog = newDogs[selectingClassesForDog];
-    
+
     if (dog.selectedClasses.includes(classId)) {
       dog.selectedClasses = dog.selectedClasses.filter((id) => id !== classId);
     } else {
       dog.selectedClasses = [...dog.selectedClasses, classId];
     }
-    
+
     setDogs(newDogs);
   };
 
-  // Handle removing a class from a dog
   const handleRemoveClass = (dogIndex: number, classId: string) => {
     const newDogs = [...dogs];
     newDogs[dogIndex].selectedClasses = newDogs[dogIndex].selectedClasses.filter(
@@ -113,42 +131,49 @@ export default function RegisterPage() {
     setDogs(newDogs);
   };
 
-  // Handle editing a dog
   const handleEditDog = (index: number) => {
     setCurrentDogIndex(index);
     setIsAddingDog(true);
     setStep("dogs");
   };
 
-  // Handle removing a dog
   const handleRemoveDog = (index: number) => {
     setDogs(dogs.filter((_, i) => i !== index));
   };
 
-  // Handle adding another dog
   const handleAddAnotherDog = () => {
     setCurrentDogIndex(null);
     setIsAddingDog(true);
     setStep("dogs");
   };
 
-  // Finish class selection and go to review
   const handleFinishClassSelection = () => {
     setSelectingClassesForDog(null);
     setStep("review");
   };
 
-  // Handle final submission
+  const needsWaiver = anyDogNeedsWaiver(dogs);
+  const canSubmit =
+    dogs.length > 0 &&
+    dogs.every((d) => {
+      const hasActivity =
+        d.activities.funDogShow ||
+        d.activities.splashPool ||
+        d.activities.agility;
+      if (!hasActivity) return false;
+      if (d.activities.funDogShow && d.selectedClasses.length === 0) return false;
+      return true;
+    }) &&
+    (!needsWaiver || waiverAccepted);
+
   const handleSubmit = async () => {
-    if (!owner) return;
+    if (!owner || !canSubmit) return;
 
     setIsSubmitting(true);
     setSubmitError("");
 
     try {
-      // Create dogs and registrations
       for (const dog of dogs) {
-        // Create dog in database
         const dogResponse = await fetch("/api/dogs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -159,6 +184,9 @@ export default function RegisterPage() {
             age: dog.age,
             sex: dog.sex,
             isRescue: dog.isRescue,
+            activityFunShow: dog.activities.funDogShow,
+            activitySplashPool: dog.activities.splashPool,
+            activityAgility: dog.activities.agility,
           }),
         });
 
@@ -168,7 +196,6 @@ export default function RegisterPage() {
 
         const createdDog = await dogResponse.json();
 
-        // Create registrations for each selected class
         for (const classId of dog.selectedClasses) {
           const regResponse = await fetch("/api/registrations", {
             method: "POST",
@@ -193,10 +220,15 @@ export default function RegisterPage() {
           ownerId: owner.id,
           ownerName: ownerName,
           ownerEmail: ownerEmail,
+          waiverAccepted: needsWaiver ? true : undefined,
         }),
       });
 
       if (!submitResponse.ok) {
+        const errBody = await submitResponse.json().catch(() => ({}));
+        if (errBody?.error) {
+          throw new Error(errBody.error);
+        }
         throw new Error("Failed to finalize registration");
       }
 
@@ -207,24 +239,29 @@ export default function RegisterPage() {
       setSubmitSuccess(true);
     } catch (error) {
       console.error("Submit error:", error);
-      setSubmitError("Failed to submit registration. Please try again.");
+      setSubmitError(
+        error instanceof Error ? error.message : "Failed to submit registration. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Calculate progress
   const getProgress = () => {
     switch (step) {
-      case "owner": return 25;
-      case "dogs": return 50;
-      case "classes": return 75;
-      case "review": return 100;
-      default: return 0;
+      case "owner":
+        return 25;
+      case "dogs":
+        return 50;
+      case "classes":
+        return 75;
+      case "review":
+        return 100;
+      default:
+        return 0;
     }
   };
 
-  // Success screen
   if (submitSuccess) {
     return (
       <main className="bg-cream-100 py-12">
@@ -273,6 +310,9 @@ export default function RegisterPage() {
     );
   }
 
+  const classStepDog =
+    selectingClassesForDog !== null ? dogs[selectingClassesForDog] : null;
+
   return (
     <main className="bg-cream-100 py-12">
       <div className="container mx-auto px-4">
@@ -292,7 +332,6 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Progress bar */}
           <div className="mb-8">
             <Progress
               value={getProgress()}
@@ -322,7 +361,6 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Step: Owner details */}
           {step === "owner" && (
             <OwnerForm
               onSubmit={handleOwnerSubmit}
@@ -331,7 +369,6 @@ export default function RegisterPage() {
             />
           )}
 
-          {/* Step: Add/Edit dog */}
           {step === "dogs" && isAddingDog && (
             <DogForm
               onSubmit={handleDogSubmit}
@@ -346,13 +383,12 @@ export default function RegisterPage() {
             />
           )}
 
-          {/* Step: Select classes for dog */}
-          {step === "classes" && selectingClassesForDog !== null && (
+          {step === "classes" && selectingClassesForDog !== null && classStepDog && (
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">
-                    Select Classes for {dogs[selectingClassesForDog]?.name}
+                    Select Classes for {classStepDog.name}
                   </h2>
                   <p className="text-stone-600">
                     Choose which classes your dog should enter
@@ -379,10 +415,8 @@ export default function RegisterPage() {
                     <ClassCard
                       key={dogClass.id}
                       dogClass={dogClass}
-                      dog={dogs[selectingClassesForDog]}
-                      isSelected={dogs[selectingClassesForDog].selectedClasses.includes(
-                        dogClass.id
-                      )}
+                      dog={classStepDog}
+                      isSelected={classStepDog.selectedClasses.includes(dogClass.id)}
                       onToggle={() => handleClassToggle(dogClass.id)}
                     />
                   ))}
@@ -391,7 +425,6 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Step: Review */}
           {step === "review" && (
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
@@ -403,19 +436,15 @@ export default function RegisterPage() {
                         <p className="text-stone-700">{ownerName}</p>
                         <p className="text-stone-600 text-sm">{ownerEmail}</p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="flat"
-                        onPress={() => setStep("owner")}
-                      >
+                      <Button size="sm" variant="flat" onPress={() => setStep("owner")}>
                         Edit
                       </Button>
                     </div>
                   </CardBody>
                 </Card>
 
-                <h2 className="text-xl font-bold mb-4">Your Dogs & Classes</h2>
-                
+                <h2 className="text-xl font-bold mb-4">Your dogs & activities</h2>
+
                 {dogs.map((dog, index) => (
                   <Card key={dog.id} className="mb-4">
                     <CardBody>
@@ -425,44 +454,55 @@ export default function RegisterPage() {
                           <div>
                             <h3 className="font-semibold text-lg">{dog.name}</h3>
                             <p className="text-sm text-stone-600">
-                              {dog.breed} • {dog.age} year{dog.age !== 1 ? "s" : ""} • {dog.sex}
-                              {dog.isRescue ? " • rescue" : ""}
+                              {activitySummary(dog).join(" · ")}
                             </p>
+                            {dog.activities.funDogShow &&
+                              dog.breed !== undefined &&
+                              dog.age !== undefined &&
+                              dog.sex !== undefined && (
+                                <p className="text-sm text-stone-600 mt-1">
+                                  {dog.breed} • {dog.age} year{dog.age !== 1 ? "s" : ""} • {dog.sex}
+                                  {dog.isRescue ? " • rescue" : ""}
+                                </p>
+                              )}
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={() => {
-                              setSelectingClassesForDog(index);
-                              setStep("classes");
-                            }}
-                          >
-                            Edit Classes
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={() => handleEditDog(index)}
-                          >
-                            Edit Dog
+                        <div className="flex gap-2 flex-wrap justify-end">
+                          {dog.activities.funDogShow && (
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              onPress={() => {
+                                setSelectingClassesForDog(index);
+                                setStep("classes");
+                              }}
+                            >
+                              Edit classes
+                            </Button>
+                          )}
+                          <Button size="sm" variant="flat" onPress={() => handleEditDog(index)}>
+                            Edit dog
                           </Button>
                         </div>
                       </div>
 
-                      {dog.selectedClasses.length === 0 ? (
+                      {dog.activities.funDogShow && dog.selectedClasses.length === 0 && (
                         <p className="text-warning text-sm bg-warning-50 p-2 rounded">
-                          No classes selected
+                          Select at least one class for the fun dog show
                         </p>
-                      ) : (
+                      )}
+
+                      {dog.activities.funDogShow && dog.selectedClasses.length > 0 && (
                         <div className="space-y-2">
                           {dog.selectedClasses.map((classId) => {
                             const c = classes.find((cl) => cl.id === classId);
                             if (!c) return null;
 
-                            const feeNumber = typeof c.fee === "number" ? c.fee : Number(c.fee ?? 0);
-                            const formattedFee = Number.isFinite(feeNumber) ? feeNumber.toFixed(2) : "0.00";
+                            const feeNumber =
+                              typeof c.fee === "number" ? c.fee : Number(c.fee ?? 0);
+                            const formattedFee = Number.isFinite(feeNumber)
+                              ? feeNumber.toFixed(2)
+                              : "0.00";
 
                             return (
                               <div
@@ -491,27 +531,42 @@ export default function RegisterPage() {
                   </Card>
                 ))}
 
-                <Button
-                  variant="flat"
-                  className="w-full"
-                  onPress={handleAddAnotherDog}
-                >
-                  + Add Another Dog
+                {needsWaiver && (
+                  <Card className="mb-4 border border-stone-300">
+                    <CardBody className="gap-3">
+                      <h3 className="font-semibold text-lg">Activity waiver</h3>
+                      <p className="text-sm text-stone-700 leading-relaxed">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+                        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                        nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+                        eu fugiat nulla pariatur.
+                      </p>
+                      <Checkbox isSelected={waiverAccepted} onValueChange={setWaiverAccepted}>
+                        I have read and agree to the waiver for splash pool and/or agility
+                        activities
+                      </Checkbox>
+                    </CardBody>
+                  </Card>
+                )}
+
+                <Button variant="flat" className="w-full" onPress={handleAddAnotherDog}>
+                  + Add another dog
                 </Button>
               </div>
 
               <div className="lg:col-span-1">
                 <Card className="sticky top-4">
                   <CardBody className="gap-4">
-                    <h3 className="font-bold text-lg">Registration Summary</h3>
-                    
+                    <h3 className="font-bold text-lg">Registration summary</h3>
+
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Dogs:</span>
                         <span>{dogs.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Total classes:</span>
+                        <span>Show classes:</span>
                         <span>
                           {dogs.reduce((s, d) => s + d.selectedClasses.length, 0)}
                         </span>
@@ -524,9 +579,9 @@ export default function RegisterPage() {
                         <span className="text-primary">
                           £
                           {(() => {
-                            const total = dogs.reduce((total, dog) => {
+                            const total = dogs.reduce((totalAcc, dog) => {
                               return (
-                                total +
+                                totalAcc +
                                 dog.selectedClasses.reduce((sum, classId) => {
                                   const c = classes.find((cl) => cl.id === classId);
                                   if (!c) return sum;
@@ -542,23 +597,18 @@ export default function RegisterPage() {
                           })()}
                         </span>
                       </div>
-                      <p className="text-xs text-stone-600 mt-1">
-                        Fees collected at the event
-                      </p>
+                      <p className="text-xs text-stone-600 mt-1">Fees collected at the event</p>
                     </div>
 
                     <Button
                       color="primary"
                       size="lg"
                       className="w-full"
-                      isDisabled={
-                        dogs.length === 0 ||
-                        dogs.every((d) => d.selectedClasses.length === 0)
-                      }
+                      isDisabled={!canSubmit}
                       isLoading={isSubmitting}
                       onPress={handleSubmit}
                     >
-                      Submit Registration
+                      Submit registration
                     </Button>
                   </CardBody>
                 </Card>

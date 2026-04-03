@@ -85,9 +85,20 @@ export default function RegistrationCart({
                 <div>
                   <h3 className="font-semibold">{dog.name}</h3>
                   <p className="text-sm text-stone-600">
-                    {dog.breed}, {dog.age} year{dog.age !== 1 ? "s" : ""} old,{" "}
-                    {dog.sex}
-                    {dog.isRescue ? ", rescue" : ""}
+                    {dog.breed !== undefined &&
+                    dog.age !== undefined &&
+                    dog.sex !== undefined ? (
+                      <>
+                        {dog.breed}, {dog.age} year{dog.age !== 1 ? "s" : ""} old, {dog.sex}
+                        {dog.isRescue ? ", rescue" : ""}
+                      </>
+                    ) : (
+                      <>
+                        {[dog.activities.funDogShow && "Fun dog show", dog.activities.splashPool && "Splash pool", dog.activities.agility && "Agility"]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -112,7 +123,9 @@ export default function RegistrationCart({
 
             {dog.selectedClasses.length === 0 ? (
               <p className="text-sm text-warning bg-warning-50 p-2 rounded">
-                No classes selected for this dog
+                {dog.activities.funDogShow
+                  ? "No classes selected for this dog"
+                  : "No fun dog show classes (other activities only)"}
               </p>
             ) : (
               <div className="space-y-2">
@@ -177,7 +190,18 @@ export default function RegistrationCart({
           color="primary"
           size="lg"
           className="w-full"
-          isDisabled={totalClasses === 0}
+          isDisabled={
+            dogs.length === 0 ||
+            dogs.some(
+              (d) => d.activities.funDogShow && d.selectedClasses.length === 0
+            ) ||
+            !dogs.some(
+              (d) =>
+                d.selectedClasses.length > 0 ||
+                d.activities.splashPool ||
+                d.activities.agility
+            )
+          }
           isLoading={isSubmitting}
           onPress={onSubmit}
         >

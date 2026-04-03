@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { registrationOperations } from '@/lib/db';
 import { CreateRegistrationRequest } from '@/types';
 
-// GET all registrations with details
+// GET admin overview: owners with all dogs and class registrations
 export async function GET() {
   try {
-    const registrations = await registrationOperations.getAll();
-    return NextResponse.json(registrations);
+    const overview = await registrationOperations.getAdminGroupedByOwner();
+    return NextResponse.json(overview);
   } catch (error) {
     console.error('Error fetching registrations:', error);
     return NextResponse.json(

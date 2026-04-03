@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RegistrationWithDetails } from "@/types";
-import {
-  groupRegistrationsByOwner,
-  GroupedRegistration,
-} from "@/lib/registrationGrouping";
+import { AdminOwnerWithDogs } from "@/types";
 
 export default function AdminPrintRegistrationsPage() {
-  const [registrations, setRegistrations] = useState<RegistrationWithDetails[]>([]);
+  const [owners, setOwners] = useState<AdminOwnerWithDogs[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,8 +15,8 @@ export default function AdminPrintRegistrationsPage() {
         if (!response.ok) {
           throw new Error("Failed to fetch registrations");
         }
-        const data = (await response.json()) as RegistrationWithDetails[];
-        setRegistrations(data);
+        const data = (await response.json()) as AdminOwnerWithDogs[];
+        setOwners(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Unknown error loading registrations"
@@ -34,16 +30,15 @@ export default function AdminPrintRegistrationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !error && registrations.length > 0) {
-      // Allow the browser a tick to render before opening the dialog
+    if (!isLoading && !error && owners.length > 0) {
       const id = window.setTimeout(() => {
         window.print();
       }, 0);
       return () => window.clearTimeout(id);
     }
-  }, [isLoading, error, registrations.length]);
+  }, [isLoading, error, owners.length]);
 
-  const grouped: GroupedRegistration[] = groupRegistrationsByOwner(registrations);
+  const hasAnyDogs = owners.some((o) => o.dogs.length > 0);
 
   return (
     <main className="admin-print-registrations">
@@ -62,12 +57,12 @@ export default function AdminPrintRegistrationsPage() {
         </div>
       )}
 
-      {!isLoading && !error && registrations.length === 0 && (
+      {!isLoading && !error && !hasAnyDogs && (
         <div className="admin-print-message">No registrations to print.</div>
       )}
 
       <section>
-        {grouped.map((owner, index) => (
+        {owners.map((owner, index) => (
           <article
             key={owner.ownerId}
             className="print-owner-record"
@@ -84,36 +79,52 @@ export default function AdminPrintRegistrationsPage() {
                     {dog.dogName}
                     {dog.dogBreed && <span className="print-dog-breed"> ({dog.dogBreed})</span>}
                   </h3>
-                  <table className="print-registrations-table">
-                    <thead>
-                      <tr>
-                        <th>Class</th>
-                        <th>Fee</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dog.registrations.map((reg) => (
-                        <tr key={reg.id}>
-                          <td>{reg.className}</td>
-                          <td>£{reg.classFee.toFixed(2)}</td>
-                          <td>{reg.status}</td>
-                          <td>
-                            {new Date(reg.createdAt).toLocaleDateString(undefined, {
-                              year: "numeric",
-                              month: "short",
-                              day: "2-digit",
-                            })}
-                          </td>
+                  <p className="print-dog-activities" style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+                    Activities:{" "}
+                    {[
+                      dog.activityFunShow ? "Fun dog show" : null,
+                      dog.activitySplashPool ? "Splash pool" : null,
+                      dog.activityAgility ? "Agility" : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </p>
+                  {dog.registrations.length === 0 ? (
+                    <p className="print-no-classes" style={{ fontSize: "0.9rem" }}>
+                      No show class entries.
+                    </p>
+                  ) : (
+                    <table className="print-registrations-table">
+                      <thead>
+                        <tr>
+                          <th>Class</th>
+                          <th>Fee</th>
+                          <th>Status</th>
+                          <th>Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {dog.registrations.map((reg) => (
+                          <tr key={reg.id}>
+                            <td>{reg.className}</td>
+                            <td>£{reg.classFee.toFixed(2)}</td>
+                            <td>{reg.status}</td>
+                            <td>
+                              {new Date(reg.createdAt).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "short",
+                                day: "2-digit",
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </section>
               ))}
             </div>
-            {index !== grouped.length - 1 && (
+            {index !== owners.length - 1 && (
               <div className="print-owner-separator" aria-hidden="true" />
             )}
           </article>
@@ -122,4 +133,3 @@ export default function AdminPrintRegistrationsPage() {
     </main>
   );
 }
-
