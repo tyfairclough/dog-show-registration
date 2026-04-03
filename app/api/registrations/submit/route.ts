@@ -143,15 +143,15 @@ export async function POST(request: NextRequest) {
     console.error('Submit registration error:', error);
     const message =
       error instanceof Error ? error.message : 'Failed to submit registration';
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'pre-fix',hypothesisId:'H_route',location:'route.ts:catch',message:'submit registration error',data:{errName:error instanceof Error?error.name:'unknown',errMessage:String(message).slice(0,500)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    const isMailgun =
+    const isEmailSendError =
       typeof message === 'string' &&
-      (message.includes('Mailgun') || message.includes('EMAIL_FROM'));
+      (message.includes('Mailgun') ||
+        message.includes('Mailtrap') ||
+        message.includes('EMAIL_FROM') ||
+        message.includes('MAILTRAP_'));
     return NextResponse.json(
       {
-        error: isMailgun
+        error: isEmailSendError
           ? 'Failed to send confirmation email. Please try again or contact us.'
           : 'Failed to submit registration',
       },

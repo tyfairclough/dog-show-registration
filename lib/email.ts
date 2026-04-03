@@ -1,5 +1,5 @@
 /**
- * Registration and admin notification emails via Mailgun (or console fallback).
+ * Registration emails: Mailtrap Email Sandbox (optional dev), Mailgun (prod), or console fallback.
  */
 
 interface EmailOptions {
@@ -39,9 +39,71 @@ function mailgunConfigured(): boolean {
   );
 }
 
+function mailtrapSandboxInboxId(): string | undefined {
+  return process.env.MAILTRAP_SANDBOX_INBOX_ID?.trim() || undefined;
+}
+
+/** Mailtrap uses header `Api-Token`, not Mailgun Basic auth. */
+function mailtrapApiToken(): string | undefined {
+  const t =
+    process.env.MAILTRAP_API_TOKEN?.trim() ||
+    process.env.MAIL_TRAP_API_TOKEN?.trim();
+  if (t) return t;
+  return process.env.MAILGUN_API_KEY?.trim() || undefined;
+}
+
+/** Parse `Name <email@domain>` or plain `email@domain` for Mailtrap JSON `from`. */
+function parseFromAddress(from: string): { email: string; name?: string } {
+  const trimmed = from.trim();
+  const m = trimmed.match(/^(.+?)\s*<([^>]+)>$/);
+  if (m) {
+    const name = m[1].replace(/^"|"$/g, '').trim();
+    const email = m[2].trim();
+    if (name) return { email, name };
+    return { email };
+  }
+  return { email: trimmed };
+}
+
+async function sendViaMailtrapSandbox(
+  inboxId: string,
+  apiToken: string,
+  options: EmailOptions
+): Promise<void> {
+  const fromRaw = process.env.EMAIL_FROM?.trim();
+  if (!fromRaw) {
+    throw new Error('EMAIL_FROM is required when using Mailtrap sandbox');
+  }
+
+  const url = `https://sandbox.api.mailtrap.io/api/send/${encodeURIComponent(inboxId)}`;
+  const payload: Record<string, unknown> = {
+    from: parseFromAddress(fromRaw),
+    to: [{ email: options.to.trim() }],
+    subject: options.subject,
+    html: options.html,
+  };
+  if (options.text) {
+    payload.text = options.text;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Api-Token': apiToken,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Mailtrap sandbox error ${res.status}: ${errBody}`);
+  }
+}
+
 function logEmailConsole(options: EmailOptions): void {
   console.log('\n========================================');
-  console.log('📧 EMAIL (console mode — Mailgun not configured)');
+  console.log('📧 EMAIL (console mode — no Mailtrap inbox / Mailgun domain configured)');
   console.log('========================================');
   console.log(`To: ${options.to}`);
   console.log(`Subject: ${options.subject}`);
@@ -75,9 +137,6 @@ async function sendViaMailgun(options: EmailOptions): Promise<void> {
   const domain = process.env.MAILGUN_DOMAIN!.trim();
   const from = process.env.EMAIL_FROM?.trim();
   const hosts = mailgunApiHosts();
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'pre-fix',hypothesisId:'H_from_region',location:'email.ts:sendViaMailgun',message:'before Mailgun fetch',data:{hasFrom:Boolean(from),region:(process.env.MAILGUN_REGION?.trim().toLowerCase())||'unset',domainSet:domain.length>0,hostCount:hosts.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   if (!from) {
     throw new Error('EMAIL_FROM is required when Mailgun is configured');
   }
@@ -107,23 +166,12 @@ async function sendViaMailgun(options: EmailOptions): Promise<void> {
     });
 
     if (res.ok) {
-      // #region agent log
-      if (i > 0) {
-        fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'post-fix',hypothesisId:'H_region_retry_ok',location:'email.ts:sendViaMailgun',message:'Mailgun OK after alternate host',data:{attemptIndex:i,hostSuffix:host.includes('eu')?'eu':'us'},timestamp:Date.now()})}).catch(()=>{});
-      }
-      // #endregion
       return;
     }
 
     const errBody = await res.text();
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'post-fix',hypothesisId:'H_mailgun_http',location:'email.ts:sendViaMailgun',message:'Mailgun non-OK',data:{httpStatus:res.status,bodyPreview:errBody.slice(0,400),attemptIndex:i,willRetry401:i===0&&hosts.length>1&&res.status===401},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     if (i === 0 && hosts.length > 1 && res.status === 401) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'post-fix',hypothesisId:'H_region_retry',location:'email.ts:sendViaMailgun',message:'retrying Mailgun after 401',data:{nextHostSuffix:hosts[1]?.includes('eu')?'eu':'us'},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       continue;
     }
 
@@ -136,15 +184,23 @@ async function sendViaMailgun(options: EmailOptions): Promise<void> {
 }
 
 /**
- * Deliver one email. Uses Mailgun when configured; otherwise logs to console.
- * Throws if Mailgun returns an error.
+ * Deliver one email: Mailtrap sandbox if `MAILTRAP_SANDBOX_INBOX_ID` is set, else Mailgun if
+ * configured, else console. Throws if an API returns an error.
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
-  const mgOn = mailgunConfigured();
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/496538ca-312e-46af-92d8-12ee3f2190b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38687a'},body:JSON.stringify({sessionId:'38687a',runId:'pre-fix',hypothesisId:'H_config',location:'email.ts:sendEmail',message:'sendEmail branch',data:{mailgunConfigured:mgOn,hasEmailFrom:Boolean(process.env.EMAIL_FROM?.trim()),domainLen:process.env.MAILGUN_DOMAIN?.trim().length??0,keyLen:process.env.MAILGUN_API_KEY?.trim().length??0},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-  if (!mgOn) {
+  const inboxId = mailtrapSandboxInboxId();
+  if (inboxId) {
+    const token = mailtrapApiToken();
+    if (!token) {
+      throw new Error(
+        'MAILTRAP_SANDBOX_INBOX_ID is set; set MAILTRAP_API_TOKEN (or MAIL_TRAP_API_TOKEN) to your Mailtrap API token (Mailtrap → API Tokens). For local dev you may put that token in MAILGUN_API_KEY instead.'
+      );
+    }
+    await sendViaMailtrapSandbox(inboxId, token, options);
+    return;
+  }
+
+  if (!mailgunConfigured()) {
     logEmailConsole(options);
     return;
   }
@@ -357,6 +413,7 @@ export async function sendAdminRegistrationNotification(
   }
 
   const baseUrl = getAppBaseUrl();
+  const adminLoginUrl = `${baseUrl}/admin/login`;
   const retrievalPath = data.retrievalToken
     ? `${baseUrl}/register/retrieve?token=${encodeURIComponent(data.retrievalToken)}`
     : '';
@@ -414,6 +471,8 @@ export async function sendAdminRegistrationNotification(
 <body style="font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px;">
   <h1 style="font-size:18px;">${ADMIN_SUBJECT}</h1>
   <p>A new volunteer day dog registration has been submitted.</p>
+  <h2 style="font-size:16px;margin-top:20px;">Admin portal</h2>
+  <p><a href="${escapeHtml(adminLoginUrl)}">Log in to the admin portal</a></p>
   <h2 style="font-size:16px;margin-top:20px;">Owner</h2>
   <table style="border-collapse:collapse;width:100%;max-width:640px;">${ownerRows}</table>
   <h2 style="font-size:16px;margin-top:20px;">Dogs and entries</h2>
@@ -432,6 +491,7 @@ export async function sendAdminRegistrationNotification(
   if (retrievalPath) {
     textLines.push(`Retrieval: ${retrievalPath}`);
   }
+  textLines.push(`Admin portal (login): ${adminLoginUrl}`);
   textLines.push('');
   data.dogs.forEach((dog, i) => {
     textLines.push(`Dog ${i + 1}: ${dog.name}`);
