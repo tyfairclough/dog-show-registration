@@ -11,21 +11,23 @@ export default function Navigation() {
       classNames={{
         base:
           "bg-[var(--etd-primary)] text-primary-foreground border-b border-white/15 backdrop-blur-sm !h-[var(--navbar-height)]",
-        wrapper: "!h-full",
-        brand: "gap-2 h-full",
+        wrapper: "!h-full !justify-center",
+        brand: "gap-2 h-full !justify-center flex-grow basis-0",
         item:
           "[background:unset] [background-color:unset] data-[active=true]:[background:unset] data-[active=true]:[background-color:unset] data-[active=true]:text-primary-foreground",
       }}
     >
       <NavbarBrand>
         <Link
-          href="/"
-          className="flex h-full w-full items-center shrink-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-primary rounded-md"
+          href="https://www.essextherapydogs.co.uk"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-full w-full items-center justify-center shrink-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-primary rounded-md"
         >
           <img
             src="/brand/essex-therapy-dogs-logo-light.svg"
             alt="Essex Therapy Dogs"
-            className="h-16 w-auto max-w-[200px] object-contain object-left"
+            className="h-16 w-auto max-w-[200px] object-contain object-center"
             width={200}
             height={64}
           />
