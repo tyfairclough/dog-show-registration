@@ -13,6 +13,23 @@ export default function SiteFooter() {
         <div className="mx-auto max-w-[1024px] px-6 py-10">
           <div className="grid gap-8 md:grid-cols-3 md:gap-10">
             <div className="text-sm text-white/90">
+              <p className="mb-4 text-white/90">
+                <a
+                  href="https://www.furryflitchers.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex max-w-full flex-wrap items-center gap-2 font-medium text-white underline decoration-white/50 underline-offset-2 transition hover:decoration-white focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--etd-teal)]"
+                >
+                  <img
+                    src="/brand/furry-flitchers.webp"
+                    alt=""
+                    className="h-[24px] w-auto max-w-full shrink-0"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span>Made with 💙 by FurryFlitchers</span>
+                </a>
+              </p>
               <p>
                 © Essex Therapy Dogs{" "}
                 <span className="text-white/60" aria-hidden>
