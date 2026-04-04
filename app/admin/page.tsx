@@ -51,9 +51,10 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Fetch registrations
-  const fetchRegistrations = useCallback(async () => {
-    setRegistrationsLoading(true);
+  // Fetch registrations (silent: no full-table loading state — e.g. after inline delete)
+  const fetchRegistrations = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setRegistrationsLoading(true);
     try {
       const response = await fetch('/api/registrations');
       if (response.ok) {
@@ -63,7 +64,7 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Failed to fetch registrations:', error);
     } finally {
-      setRegistrationsLoading(false);
+      if (!silent) setRegistrationsLoading(false);
     }
   }, []);
 
@@ -237,6 +238,7 @@ export default function AdminPage() {
                   <RegistrationTable
                     owners={registrationOwners}
                     isLoading={registrationsLoading}
+                    onRegistrationDeleted={() => fetchRegistrations({ silent: true })}
                   />
                 </CardBody>
               </Card>
