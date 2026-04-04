@@ -97,36 +97,6 @@ function createPrismaClient() {
 
   const poolConfig = buildMariaDbPoolConfig(databaseUrl);
 
-  // #region agent log
-  fetch('http://127.0.0.1:7682/ingest/4385eb11-8364-45a7-8539-50119442d099', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '370c77',
-    },
-    body: JSON.stringify({
-      sessionId: '370c77',
-      hypothesisId: 'H1-H3',
-      runId: 'pre-fix',
-      location: 'lib/prisma.ts:createPrismaClient',
-      message: 'MariaDB pool config (no secrets)',
-      data: {
-        host: poolConfig.host,
-        port: poolConfig.port,
-        database: poolConfig.database,
-        hasUser: Boolean(poolConfig.user),
-        hasPassword: Boolean(poolConfig.password),
-        ssl: Boolean(poolConfig.ssl),
-        connectTimeout: poolConfig.connectTimeout,
-        acquireTimeout: poolConfig.acquireTimeout,
-        ipv4LocalhostEnv: process.env.DATABASE_IPV4_LOCALHOST === 'true',
-        databaseSslEnv: process.env.DATABASE_SSL === 'true',
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   const adapter = new PrismaMariaDb(poolConfig);
 
   return new PrismaClient({
