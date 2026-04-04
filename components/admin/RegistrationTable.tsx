@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Table,
   TableHeader,
@@ -12,15 +13,101 @@ import {
   CardHeader,
   CardBody,
   Button,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from "@heroui/react";
 import { AdminOwnerWithDogs } from "@/types";
 
 interface RegistrationTableProps {
   owners: AdminOwnerWithDogs[];
   isLoading: boolean;
+  onRegistrationDeleted?: () => void;
 }
 
-export default function RegistrationTable({ owners, isLoading }: RegistrationTableProps) {
+type DeleteTarget =
+  | {
+      kind: "classRow";
+      registrationId: string;
+      dogName: string;
+      className: string;
+    }
+  | { kind: "wholeOwner"; ownerId: string; ownerName: string };
+
+export default function RegistrationTable({
+  owners,
+  isLoading,
+  onRegistrationDeleted,
+}: RegistrationTableProps) {
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "danger"; message: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!feedback || feedback.type !== "success") return;
+    const t = window.setTimeout(() => setFeedback(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [feedback]);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      if (deleteTarget.kind === "classRow") {
+        const response = await fetch(
+          `/api/registrations/${encodeURIComponent(deleteTarget.registrationId)}`,
+          { method: "DELETE" }
+        );
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+
+        if (!response.ok) {
+          setFeedback({
+            type: "danger",
+            message: data.error ?? "Could not delete this registration. Please try again.",
+          });
+          return;
+        }
+
+        setDeleteTarget(null);
+        setFeedback({ type: "success", message: "Registration deleted successfully." });
+        onRegistrationDeleted?.();
+        return;
+      }
+
+      const response = await fetch(
+        `/api/owners/${encodeURIComponent(deleteTarget.ownerId)}`,
+        { method: "DELETE" }
+      );
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        setFeedback({
+          type: "danger",
+          message: data.error ?? "Could not delete this registration. Please try again.",
+        });
+        return;
+      }
+
+      setDeleteTarget(null);
+      setFeedback({
+        type: "success",
+        message:
+          "This person's registration, all show class entries, and all activity bookings have been removed.",
+      });
+      onRegistrationDeleted?.();
+    } catch {
+      setFeedback({
+        type: "danger",
+        message: "Could not delete this registration. Please try again.",
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
   if (isLoading) {
     return <div className="text-center py-8 text-stone-600">Loading registrations...</div>;
   }
@@ -47,7 +134,59 @@ export default function RegistrationTable({ owners, isLoading }: RegistrationTab
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div className="space-y-4">
+      {feedback && (
+        <div
+          role="status"
+          className={
+            feedback.type === "success"
+              ? "rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+              : "rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          }
+        >
+          {feedback.message}
+        </div>
+      )}
+
+      <Modal
+        isOpen={!!deleteTarget}
+        isDismissable={!deleteLoading}
+        onClose={() => !deleteLoading && setDeleteTarget(null)}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {deleteTarget?.kind === "wholeOwner"
+              ? "Delete entire registration"
+              : "Delete class registration"}
+          </ModalHeader>
+          <ModalBody>
+            {deleteTarget?.kind === "wholeOwner" ? (
+              <p className="text-sm text-stone-700">
+                Are you sure you want to delete this entire registration? This will remove{" "}
+                <span className="font-medium">{deleteTarget.ownerName}</span>, all of their dogs,
+                every show class entry, and all activity bookings (fun dog show, splash pool,
+                agility). This cannot be undone.
+              </p>
+            ) : deleteTarget?.kind === "classRow" ? (
+              <p className="text-sm text-stone-700">
+                Are you sure you want to delete this registration? This removes{" "}
+                <span className="font-medium">{deleteTarget.dogName}</span>&apos;s entry for{" "}
+                <span className="font-medium">{deleteTarget.className}</span> and cannot be undone.
+              </p>
+            ) : null}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={() => setDeleteTarget(null)} isDisabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button color="danger" onPress={handleConfirmDelete} isLoading={deleteLoading}>
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {owners.map((owner) => (
         <Card key={owner.ownerId} className="shadow-xs">
           <CardHeader className="bg-cream-100 flex flex-row flex-wrap items-start justify-between gap-3">
@@ -55,20 +194,35 @@ export default function RegistrationTable({ owners, isLoading }: RegistrationTab
               <h3 className="text-lg font-semibold">{owner.ownerName}</h3>
               <p className="text-sm text-stone-600">{owner.ownerEmail}</p>
             </div>
-            <Button
-              size="sm"
-              variant="flat"
-              className="shrink-0"
-              onPress={() => {
-                window.open(
-                  `/api/pdf/registration-forms?ownerId=${encodeURIComponent(owner.ownerId)}`,
-                  "_blank",
-                  "noopener,noreferrer"
-                );
-              }}
-            >
-              Print this owner&apos;s forms
-            </Button>
+            <div className="flex flex-wrap gap-2 shrink-0 justify-end">
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => {
+                  window.open(
+                    `/api/pdf/registration-forms?ownerId=${encodeURIComponent(owner.ownerId)}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }}
+              >
+                Print this owner&apos;s forms
+              </Button>
+              <Button
+                size="sm"
+                variant="flat"
+                color="danger"
+                onPress={() =>
+                  setDeleteTarget({
+                    kind: "wholeOwner",
+                    ownerId: owner.ownerId,
+                    ownerName: owner.ownerName,
+                  })
+                }
+              >
+                Delete entire registration
+              </Button>
+            </div>
           </CardHeader>
           <CardBody>
             {owner.dogs.map((dog) => (
@@ -108,6 +262,7 @@ export default function RegistrationTable({ owners, isLoading }: RegistrationTab
                       <TableColumn>FEE</TableColumn>
                       <TableColumn>STATUS</TableColumn>
                       <TableColumn>DATE</TableColumn>
+                      <TableColumn align="end">ACTIONS</TableColumn>
                     </TableHeader>
                     <TableBody>
                       {dog.registrations.map((reg) => (
@@ -125,6 +280,24 @@ export default function RegistrationTable({ owners, isLoading }: RegistrationTab
                           </TableCell>
                           <TableCell>
                             {new Date(reg.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="light"
+                              color="danger"
+                              className="min-w-0"
+                              onPress={() =>
+                                setDeleteTarget({
+                                  kind: "classRow",
+                                  registrationId: reg.id,
+                                  dogName: dog.dogName,
+                                  className: reg.className,
+                                })
+                              }
+                            >
+                              Delete
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -155,6 +328,7 @@ export default function RegistrationTable({ owners, isLoading }: RegistrationTab
           </CardBody>
         </Card>
       ))}
+      </div>
     </div>
   );
 }

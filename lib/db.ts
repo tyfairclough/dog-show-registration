@@ -191,6 +191,38 @@ export const ownerOperations = {
     });
     return ownerOperations.getById(ownerId);
   },
+
+  /** Owner, all dogs, and all class rows; refreshes class capacity counts. */
+  deleteWithAllRegistrations: async (ownerId: string) => {
+    const owner = await prisma.owner.findUnique({
+      where: { id: ownerId },
+      include: {
+        dogs: { include: { registrations: true } },
+      },
+    });
+    if (!owner) return null;
+
+    const classIds = new Set<string>();
+    for (const dog of owner.dogs) {
+      for (const r of dog.registrations) {
+        classIds.add(r.class_id);
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.registration.deleteMany({
+        where: { dog: { owner_id: ownerId } },
+      });
+      await tx.dog.deleteMany({ where: { owner_id: ownerId } });
+      await tx.owner.delete({ where: { id: ownerId } });
+    });
+
+    for (const classId of classIds) {
+      await classOperations.updateRegistrationCount(classId);
+    }
+
+    return { deleted: true as const };
+  },
 };
 
 // Dog operations (Prisma-backed)
