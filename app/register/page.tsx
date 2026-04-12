@@ -535,13 +535,64 @@ export default function RegisterPage() {
                   <Card className="mb-4 border border-stone-300">
                     <CardBody className="gap-3">
                       <h3 className="font-semibold text-lg">Activity waiver</h3>
-                      <p className="text-sm text-stone-700 leading-relaxed">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-                        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-                        nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-                        eu fugiat nulla pariatur.
-                      </p>
+                      <div
+                        className="h-28 overflow-y-auto rounded-md border border-stone-200 bg-stone-50/80 px-3 py-2 text-sm text-stone-700 leading-relaxed"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="Agility course disclaimer"
+                      >
+                        <p>
+                          Participation in the agility course is entirely voluntary and undertaken at
+                          your own risk.
+                        </p>
+                        <p className="mt-2 font-medium">By taking part, participants confirm that:</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                          <li>
+                            They are responsible for ensuring their dog is fit, healthy, and suitable
+                            to take part in physical activity.
+                          </li>
+                          <li>
+                            Their dog is under control at all times and able to interact safely with
+                            people and other dogs.
+                          </li>
+                          <li>
+                            They will follow all instructions provided by event organisers and
+                            volunteers.
+                          </li>
+                        </ul>
+                        <p className="mt-2 font-medium">
+                          The organisers, volunteers, and hosting venue accept no liability for:
+                        </p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                          <li>
+                            Injury, loss, or damage to persons, dogs, or property arising from
+                            participation in the agility course.
+                          </li>
+                          <li>
+                            Any incidents resulting from failure to follow instructions or control a
+                            dog appropriately.
+                          </li>
+                        </ul>
+                        <p className="mt-2 font-medium">Owners/handlers are fully responsible for:</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                          <li>Their dog&apos;s behaviour at all times.</li>
+                          <li>Cleaning up after their dog.</li>
+                          <li>Ensuring their dog does not pose a risk to others.</li>
+                        </ul>
+                        <p className="mt-2">
+                          Children must be supervised by a responsible adult at all times while using
+                          or near the agility course.
+                        </p>
+                        <p className="mt-2">
+                          The organisers reserve the right to refuse participation or ask any
+                          participant to leave the activity area if they believe there is a risk to
+                          safety.
+                        </p>
+                        <p className="mt-2">
+                          I can confirm I have read and understand this Agility Course Disclaimer
+                          and the risks associated with it.
+                        </p>
+                      </div>
                       <Checkbox isSelected={waiverAccepted} onValueChange={setWaiverAccepted}>
                         I have read and agree to the waiver for splash pool and/or agility
                         activities
