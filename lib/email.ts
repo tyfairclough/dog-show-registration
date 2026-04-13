@@ -43,6 +43,17 @@ function mailtrapSandboxInboxId(): string | undefined {
   return process.env.MAILTRAP_SANDBOX_INBOX_ID?.trim() || undefined;
 }
 
+/** Mailtrap sandbox rejects bursts; space sequential sends on registration submit. */
+const MAILTRAP_REGISTRATION_SEND_GAP_MS = 11_000;
+
+async function paceBeforeNextMailtrapSendIfConfigured(): Promise<void> {
+  if (!mailtrapSandboxInboxId()) return;
+
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, MAILTRAP_REGISTRATION_SEND_GAP_MS);
+  });
+}
+
 /** Mailtrap uses header `Api-Token`, not Mailgun Basic auth. */
 function mailtrapApiToken(): string | undefined {
   const t =
@@ -411,6 +422,8 @@ export async function sendAdminRegistrationNotification(
     );
     return;
   }
+
+  await paceBeforeNextMailtrapSendIfConfigured();
 
   const baseUrl = getAppBaseUrl();
   const adminLoginUrl = `${baseUrl}/admin/login`;
