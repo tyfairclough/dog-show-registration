@@ -140,6 +140,65 @@ const documentStyles = `
     color: #1a1a1a;
     background: #fff;
   }
+  @media screen {
+    html, body {
+      background: #e2e8f0;
+    }
+    .print-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 16px;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid #cbd5e0;
+      font-size: 14px;
+    }
+    .print-toolbar p {
+      margin: 0;
+      flex: 1 1 200px;
+      color: #475569;
+    }
+    .print-toolbar button {
+      font: inherit;
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: 1px solid #2c5282;
+      background: #2c5282;
+      color: #fff;
+      cursor: pointer;
+    }
+    .print-toolbar button:hover {
+      background: #234670;
+    }
+    .form-document {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 16px 12px 32px;
+      background: #e2e8f0;
+    }
+  }
+  @media print {
+    .print-toolbar {
+      display: none !important;
+    }
+    html, body {
+      background: #fff !important;
+    }
+    .form-document {
+      padding: 0;
+      margin: 0;
+      max-width: none;
+      background: transparent;
+    }
+    .form-header,
+    .class-table th {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
   .form-page {
     page-break-after: always;
     min-height: 0;
@@ -238,11 +297,28 @@ const documentStyles = `
   }
 `;
 
+export type BuildRegistrationFormsHtmlOptions = {
+  /** When true, opens the browser print dialog shortly after load (new tab / window). */
+  autoPrint?: boolean;
+};
+
 /**
  * Full HTML document with one or more A4 form pages (CSS page break between dogs).
  */
-export function buildRegistrationFormsHtml(pages: RegistrationFormPageInput[]): string {
+export function buildRegistrationFormsHtml(
+  pages: RegistrationFormPageInput[],
+  options?: BuildRegistrationFormsHtmlOptions
+): string {
   const body = pages.map(pageFragment).join('\n');
+  const autoPrintScript = options?.autoPrint
+    ? `<script>
+(function(){
+  function run(){ window.print(); }
+  if (document.readyState === "complete") setTimeout(run, 0);
+  else window.addEventListener("load", function(){ setTimeout(run, 0); });
+})();
+</script>`
+    : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -252,7 +328,14 @@ export function buildRegistrationFormsHtml(pages: RegistrationFormPageInput[]): 
   <style>${documentStyles}</style>
 </head>
 <body>
+<div class="print-toolbar">
+  <p>Use your browser&apos;s print dialog to print or save as PDF.</p>
+  <button type="button" onclick="window.print()">Print</button>
+</div>
+<main class="form-document">
 ${body}
+</main>
+${autoPrintScript}
 </body>
 </html>`;
 }

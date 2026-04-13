@@ -200,11 +200,13 @@ export default function AdminPage() {
                       variant="bordered"
                       size="sm"
                       onPress={() => {
-                        window.open(
-                          "/api/pdf/registration-forms?mode=blank",
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
+                        const link = document.createElement("a");
+                        link.href = "/dog-show-registration-form.pdf";
+                        link.download = "dog-show-registration-form.pdf";
+                        link.rel = "noopener noreferrer";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
                       }}
                     >
                       Print blank form

@@ -196,7 +196,7 @@ function RetrieveContent() {
                   const t = data.owner.retrieval_token;
                   if (!t) return;
                   window.open(
-                    `/api/pdf/registration-forms?token=${encodeURIComponent(t)}`,
+                    `/api/registration-forms/print?token=${encodeURIComponent(t)}&autoPrint=1`,
                     "_blank",
                     "noopener,noreferrer"
                   );
