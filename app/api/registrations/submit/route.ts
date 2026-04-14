@@ -145,8 +145,7 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error.message : 'Failed to submit registration';
     const isEmailSendError =
       typeof message === 'string' &&
-      (message.includes('Mailgun') ||
-        message.includes('Mailtrap') ||
+      (message.includes('Mailtrap') ||
         message.includes('EMAIL_FROM') ||
         message.includes('MAILTRAP_'));
     return NextResponse.json(

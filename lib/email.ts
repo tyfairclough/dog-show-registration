@@ -1,5 +1,5 @@
 /**
- * Registration emails: Mailtrap Email Sandbox (optional dev), Mailgun (prod), or console fallback.
+ * Registration emails via Mailtrap Email Sandbox.
  */
 
 interface EmailOptions {
@@ -30,15 +30,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** Old `.env.example` sample value; Mailgun returns 401 if copied into `.env.local`. */
-const LEGACY_EXAMPLE_MAILGUN_API_KEY = '956b22bbe63c992c3b169f478cddbbe3';
-
-function mailgunConfigured(): boolean {
-  return Boolean(
-    process.env.MAILGUN_API_KEY?.trim() && process.env.MAILGUN_DOMAIN?.trim()
-  );
-}
-
 function mailtrapSandboxInboxId(): string | undefined {
   return process.env.MAILTRAP_SANDBOX_INBOX_ID?.trim() || undefined;
 }
@@ -54,13 +45,9 @@ async function paceBeforeNextMailtrapSendIfConfigured(): Promise<void> {
   });
 }
 
-/** Mailtrap uses header `Api-Token`, not Mailgun Basic auth. */
+/** Mailtrap uses header `Api-Token`. */
 function mailtrapApiToken(): string | undefined {
-  const t =
-    process.env.MAILTRAP_API_TOKEN?.trim() ||
-    process.env.MAIL_TRAP_API_TOKEN?.trim();
-  if (t) return t;
-  return process.env.MAILGUN_API_KEY?.trim() || undefined;
+  return process.env.MAILTRAP_API_TOKEN?.trim() || undefined;
 }
 
 /** Parse `Name <email@domain>` or plain `email@domain` for Mailtrap JSON `from`. */
@@ -112,110 +99,25 @@ async function sendViaMailtrapSandbox(
   }
 }
 
-function logEmailConsole(options: EmailOptions): void {
-  console.log('\n========================================');
-  console.log('📧 EMAIL (console mode — no Mailtrap inbox / Mailgun domain configured)');
-  console.log('========================================');
-  console.log(`To: ${options.to}`);
-  console.log(`Subject: ${options.subject}`);
-  console.log('----------------------------------------');
-  console.log('HTML Content:');
-  console.log(options.html);
-  if (options.text) {
-    console.log('----------------------------------------');
-    console.log('Plain Text:');
-    console.log(options.text);
-  }
-  console.log('========================================\n');
-}
-
-/** US vs EU keys/domains must hit the matching API host; 401 often means wrong host. */
-function mailgunApiHosts(): string[] {
-  const region = process.env.MAILGUN_REGION?.trim().toLowerCase();
-  if (region === 'eu') return ['https://api.eu.mailgun.net'];
-  if (region === 'us') return ['https://api.mailgun.net'];
-  // Unset: try US then EU (EU accounts commonly return 401 on the US endpoint).
-  return ['https://api.mailgun.net', 'https://api.eu.mailgun.net'];
-}
-
-async function sendViaMailgun(options: EmailOptions): Promise<void> {
-  const key = process.env.MAILGUN_API_KEY!.trim();
-  if (key === LEGACY_EXAMPLE_MAILGUN_API_KEY) {
-    throw new Error(
-      'MAILGUN_API_KEY is the sample value from .env.example — set your real Mailgun private API key in .env.local (Sending → Domain → API keys).'
-    );
-  }
-  const domain = process.env.MAILGUN_DOMAIN!.trim();
-  const from = process.env.EMAIL_FROM?.trim();
-  const hosts = mailgunApiHosts();
-  if (!from) {
-    throw new Error('EMAIL_FROM is required when Mailgun is configured');
-  }
-
-  const body = new URLSearchParams();
-  body.set('from', from);
-  body.set('to', options.to);
-  body.set('subject', options.subject);
-  body.set('html', options.html);
-  if (options.text) {
-    body.set('text', options.text);
-  }
-
-  const auth = Buffer.from(`api:${key}`, 'utf8').toString('base64');
-  const bodyStr = body.toString();
-
-  for (let i = 0; i < hosts.length; i++) {
-    const host = hosts[i];
-    const url = `${host}/v3/${encodeURIComponent(domain)}/messages`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: bodyStr,
-    });
-
-    if (res.ok) {
-      return;
-    }
-
-    const errBody = await res.text();
-
-    if (i === 0 && hosts.length > 1 && res.status === 401) {
-      continue;
-    }
-
-    const authHint =
-      res.status === 401
-        ? ' Verify MAILGUN_API_KEY is the private API key for this Mailgun account (401 on all tried API hosts usually means a wrong or revoked key).'
-        : '';
-    throw new Error(`Mailgun error ${res.status}: ${errBody}${authHint}`);
-  }
-}
-
 /**
- * Deliver one email: Mailtrap sandbox if `MAILTRAP_SANDBOX_INBOX_ID` is set, else Mailgun if
- * configured, else console. Throws if an API returns an error.
+ * Deliver one email via Mailtrap sandbox.
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
   const inboxId = mailtrapSandboxInboxId();
-  if (inboxId) {
-    const token = mailtrapApiToken();
-    if (!token) {
-      throw new Error(
-        'MAILTRAP_SANDBOX_INBOX_ID is set; set MAILTRAP_API_TOKEN (or MAIL_TRAP_API_TOKEN) to your Mailtrap API token (Mailtrap → API Tokens). For local dev you may put that token in MAILGUN_API_KEY instead.'
-      );
-    }
-    await sendViaMailtrapSandbox(inboxId, token, options);
-    return;
+  if (!inboxId) {
+    throw new Error(
+      'MAILTRAP_SANDBOX_INBOX_ID is required to send emails. Configure Mailtrap Email Sandbox in environment variables.'
+    );
   }
 
-  if (!mailgunConfigured()) {
-    logEmailConsole(options);
-    return;
+  const token = mailtrapApiToken();
+  if (!token) {
+    throw new Error(
+      'MAILTRAP_API_TOKEN is required when MAILTRAP_SANDBOX_INBOX_ID is set.'
+    );
   }
-  await sendViaMailgun(options);
+
+  await sendViaMailtrapSandbox(inboxId, token, options);
 }
 
 export interface RegistrationDogDetail {
