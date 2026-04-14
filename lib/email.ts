@@ -9,6 +9,32 @@ interface EmailOptions {
   text?: string;
 }
 
+function debugLog(
+  location: string,
+  message: string,
+  hypothesisId: string,
+  data: Record<string, unknown>
+): void {
+  // #region agent log
+  fetch('http://127.0.0.1:7727/ingest/8ea8959e-9e90-45fc-be3f-86142e1f857e', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': 'b7058b',
+    },
+    body: JSON.stringify({
+      sessionId: 'b7058b',
+      runId: 'initial',
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+}
+
 export function getAppBaseUrl(): string {
   const raw =
     process.env.APP_BASE_URL?.trim() ||
@@ -68,6 +94,10 @@ async function sendViaMailtrapSandbox(
   apiToken: string,
   options: EmailOptions
 ): Promise<void> {
+  debugLog('lib/email.ts:92', 'Using sandbox endpoint', 'H1', {
+    endpoint: 'https://sandbox.api.mailtrap.io/api/send/:inboxId',
+    toDomain: options.to.includes('@') ? options.to.split('@')[1] : 'invalid',
+  });
   const fromRaw = process.env.EMAIL_FROM?.trim();
   if (!fromRaw) {
     throw new Error('EMAIL_FROM is required when using Mailtrap sandbox');
@@ -103,15 +133,31 @@ async function sendViaMailtrapSandbox(
  * Deliver one email via Mailtrap sandbox.
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
+  const nodeEnv = process.env.NODE_ENV?.trim() || '';
   const inboxId = mailtrapSandboxInboxId();
+  const token = mailtrapApiToken();
+  debugLog('lib/email.ts:116', 'sendEmail environment snapshot', 'H2', {
+    nodeEnv,
+    hasSandboxInboxId: Boolean(inboxId),
+    hasApiToken: Boolean(token),
+    hasEmailFrom: Boolean(process.env.EMAIL_FROM?.trim()),
+    appBaseUrlSet: Boolean(process.env.APP_BASE_URL?.trim()),
+  });
   if (!inboxId) {
+    debugLog('lib/email.ts:124', 'Throwing missing sandbox inbox id', 'H3', {
+      nodeEnv,
+      hasApiToken: Boolean(token),
+    });
     throw new Error(
       'MAILTRAP_SANDBOX_INBOX_ID is required to send emails. Configure Mailtrap Email Sandbox in environment variables.'
     );
   }
 
-  const token = mailtrapApiToken();
   if (!token) {
+    debugLog('lib/email.ts:134', 'Throwing missing Mailtrap API token', 'H4', {
+      nodeEnv,
+      hasSandboxInboxId: Boolean(inboxId),
+    });
     throw new Error(
       'MAILTRAP_API_TOKEN is required when MAILTRAP_SANDBOX_INBOX_ID is set.'
     );
