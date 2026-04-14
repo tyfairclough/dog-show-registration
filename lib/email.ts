@@ -429,7 +429,7 @@ export async function sendAdminRegistrationNotification(
   const ownerRows = `
     <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Name</strong></td><td style="padding:8px;border:1px solid #ccc;">${escapeHtml(data.ownerName)}</td></tr>
     <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Email</strong></td><td style="padding:8px;border:1px solid #ccc;">${escapeHtml(data.ownerEmail)}</td></tr>
-    <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Activity waiver</strong></td><td style="padding:8px;border:1px solid #ccc;">${data.waiverJustAccepted ? 'Accepted this session (splash pool and/or agility)' : 'Not required or already on file'}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ccc;"><strong>Activity waiver</strong></td><td style="padding:8px;border:1px solid #ccc;">${data.waiverJustAccepted ? 'Accepted this session (agility)' : 'Not required or already on file'}</td></tr>
     ${retrievalPath ? `<tr><td style="padding:8px;border:1px solid #ccc;"><strong>Retrieval link</strong></td><td style="padding:8px;border:1px solid #ccc;"><a href="${escapeHtml(retrievalPath)}">${escapeHtml(retrievalPath)}</a></td></tr>` : ''}
   `;
 

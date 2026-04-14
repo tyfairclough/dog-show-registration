@@ -10,12 +10,12 @@ import { DogClass, DogFormData, Owner } from "@/types";
 
 type Step = "owner" | "dogs" | "classes" | "review";
 
-function dogNeedsPoolWaiver(d: DogFormData): boolean {
-  return d.activities.splashPool || d.activities.agility;
+function dogNeedsActivityWaiver(d: DogFormData): boolean {
+  return d.activities.agility;
 }
 
 function anyDogNeedsWaiver(dogs: DogFormData[]): boolean {
-  return dogs.some(dogNeedsPoolWaiver);
+  return dogs.some(dogNeedsActivityWaiver);
 }
 
 function activitySummary(d: DogFormData): string[] {
@@ -594,8 +594,7 @@ export default function RegisterPage() {
                         </p>
                       </div>
                       <Checkbox isSelected={waiverAccepted} onValueChange={setWaiverAccepted}>
-                        I have read and agree to the waiver for splash pool and/or agility
-                        activities
+                        I have read and agree to the waiver for agility activities
                       </Checkbox>
                     </CardBody>
                   </Card>
