@@ -60,6 +60,11 @@ function mailtrapSandboxInboxId(): string | undefined {
   return process.env.MAILTRAP_SANDBOX_INBOX_ID?.trim() || undefined;
 }
 
+function mailtrapSendingEnabled(): boolean {
+  const raw = process.env.MAILTRAP_SENDING_ENABLED?.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+}
+
 /** Mailtrap sandbox rejects bursts; space sequential sends on registration submit. */
 const MAILTRAP_REGISTRATION_SEND_GAP_MS = 11_000;
 
@@ -129,6 +134,41 @@ async function sendViaMailtrapSandbox(
   }
 }
 
+async function sendViaMailtrapSendingApi(
+  apiToken: string,
+  options: EmailOptions
+): Promise<void> {
+  const fromRaw = process.env.EMAIL_FROM?.trim();
+  if (!fromRaw) {
+    throw new Error('EMAIL_FROM is required when using Mailtrap Sending API');
+  }
+
+  const payload: Record<string, unknown> = {
+    from: parseFromAddress(fromRaw),
+    to: [{ email: options.to.trim() }],
+    subject: options.subject,
+    category: 'registration',
+    html: options.html,
+  };
+  if (options.text) {
+    payload.text = options.text;
+  }
+
+  const res = await fetch('https://send.api.mailtrap.io/api/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Mailtrap sending API error ${res.status}: ${errBody}`);
+  }
+}
+
 /**
  * Deliver one email via Mailtrap sandbox.
  */
@@ -136,30 +176,37 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   const nodeEnv = process.env.NODE_ENV?.trim() || '';
   const inboxId = mailtrapSandboxInboxId();
   const token = mailtrapApiToken();
+  const sendingEnabled = mailtrapSendingEnabled();
   debugLog('lib/email.ts:116', 'sendEmail environment snapshot', 'H2', {
     nodeEnv,
+    sendingEnabled,
     hasSandboxInboxId: Boolean(inboxId),
     hasApiToken: Boolean(token),
     hasEmailFrom: Boolean(process.env.EMAIL_FROM?.trim()),
     appBaseUrlSet: Boolean(process.env.APP_BASE_URL?.trim()),
   });
-  if (!inboxId) {
-    debugLog('lib/email.ts:124', 'Throwing missing sandbox inbox id', 'H3', {
-      nodeEnv,
-      hasApiToken: Boolean(token),
-    });
-    throw new Error(
-      'MAILTRAP_SANDBOX_INBOX_ID is required to send emails. Configure Mailtrap Email Sandbox in environment variables.'
-    );
-  }
-
   if (!token) {
     debugLog('lib/email.ts:134', 'Throwing missing Mailtrap API token', 'H4', {
       nodeEnv,
       hasSandboxInboxId: Boolean(inboxId),
+      sendingEnabled,
+    });
+    throw new Error('MAILTRAP_API_TOKEN is required to send emails.');
+  }
+
+  if (sendingEnabled) {
+    await sendViaMailtrapSendingApi(token, options);
+    return;
+  }
+
+  if (!inboxId) {
+    debugLog('lib/email.ts:124', 'Throwing missing sandbox inbox id', 'H3', {
+      nodeEnv,
+      hasApiToken: Boolean(token),
+      sendingEnabled,
     });
     throw new Error(
-      'MAILTRAP_API_TOKEN is required when MAILTRAP_SANDBOX_INBOX_ID is set.'
+      'MAILTRAP_SANDBOX_INBOX_ID is required when MAILTRAP_SENDING_ENABLED is false. Configure Mailtrap Email Sandbox or enable sending mode.'
     );
   }
 

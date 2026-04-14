@@ -146,12 +146,15 @@ export async function POST(request: NextRequest) {
     const isEmailSendError =
       typeof message === 'string' &&
       (message.includes('Mailtrap') ||
+        message.includes('sending API') ||
         message.includes('EMAIL_FROM') ||
-        message.includes('MAILTRAP_'));
+        message.includes('MAILTRAP_') ||
+        message.includes('Api-Token') ||
+        message.includes('Authorization'));
     return NextResponse.json(
       {
         error: isEmailSendError
-          ? 'Failed to send confirmation email. Please try again or contact us.'
+          ? 'Failed to send confirmation email due to email configuration. Please try again or contact us.'
           : 'Failed to submit registration',
       },
       { status: 500 }
