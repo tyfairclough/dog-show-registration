@@ -48,7 +48,7 @@ export default function OwnerForm({ onSubmit, initialName = "", initialEmail = "
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader className="flex flex-col items-start">
-        <h2 className="text-2xl font-bold">Your Details</h2>
+        <h2 className="text-2xl font-bold">Volunteer details</h2>
         <p className="text-sm text-stone-600">
           Enter your contact information to register your dogs
         </p>

@@ -32,6 +32,15 @@ const emptyActivities: DogActivities = {
   agility: false,
 };
 
+/** Title case each whitespace-separated word (e.g. dog name from the previous step). */
+function titleCaseWords(s: string): string {
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps) {
   const [step, setStep] = useState<WizardStep>("name");
   const [name, setName] = useState(editingDog?.name || "");
@@ -145,17 +154,20 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
     step === "name"
       ? editingDog
         ? "Edit Dog"
-        : "Add a Dog"
+        : "Add your dog"
       : step === "activities"
         ? "Activities"
         : "Dog details";
 
   const stepSubtitle =
     step === "name"
-      ? "What is your dog called?"
+      ? "You can add additional dogs later."
       : step === "activities"
-        ? `Which activities will ${name.trim()} take part in?`
+        ? `Choose activities for ${titleCaseWords(name.trim())}`
         : "We need these details for fun dog show classes";
+
+  const allActivitiesSelected =
+    activities.funDogShow && activities.splashPool && activities.agility;
 
   return (
     <Card className="max-w-md mx-auto">
@@ -206,7 +218,7 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
                   setActivities((a) => ({ ...a, funDogShow: v }))
                 }
               >
-                Fun dog show
+                Fun dog show classes
               </Checkbox>
               <Checkbox
                 isSelected={activities.splashPool}
@@ -223,6 +235,18 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
                 }
               >
                 Agility session
+              </Checkbox>
+              <Checkbox
+                isSelected={allActivitiesSelected}
+                onValueChange={(v) =>
+                  setActivities({
+                    funDogShow: v,
+                    splashPool: v,
+                    agility: v,
+                  })
+                }
+              >
+                Select all
               </Checkbox>
             </div>
           </CardBody>

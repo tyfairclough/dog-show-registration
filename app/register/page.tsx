@@ -11,7 +11,15 @@ import { DogClass, DogFormData, Owner } from "@/types";
 type Step = "owner" | "dogs" | "classes" | "review";
 
 function dogNeedsActivityWaiver(d: DogFormData): boolean {
-  return d.activities.agility;
+  return d.activities.agility || d.activities.splashPool;
+}
+
+function dogsNeedSplashWaiver(dogs: DogFormData[]): boolean {
+  return dogs.some((d) => d.activities.splashPool);
+}
+
+function dogsNeedAgilityWaiver(dogs: DogFormData[]): boolean {
+  return dogs.some((d) => d.activities.agility);
 }
 
 function anyDogNeedsWaiver(dogs: DogFormData[]): boolean {
@@ -24,6 +32,14 @@ function activitySummary(d: DogFormData): string[] {
   if (d.activities.splashPool) parts.push("Splash pool");
   if (d.activities.agility) parts.push("Agility");
   return parts;
+}
+
+function titleCaseWords(s: string): string {
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 export default function RegisterPage() {
@@ -153,6 +169,30 @@ export default function RegisterPage() {
   };
 
   const needsWaiver = anyDogNeedsWaiver(dogs);
+  const waiverIncludesSplash = dogsNeedSplashWaiver(dogs);
+  const waiverIncludesAgility = dogsNeedAgilityWaiver(dogs);
+
+  const waiverTitle =
+    waiverIncludesSplash && waiverIncludesAgility
+      ? "Agility and splash pool waiver"
+      : waiverIncludesSplash
+        ? "Splash pool waiver"
+        : "Agility waiver";
+
+  const waiverRegionAriaLabel =
+    waiverIncludesSplash && waiverIncludesAgility
+      ? "Agility course disclaimer and splash pool terms and conditions"
+      : waiverIncludesSplash
+        ? "Splash pool terms and conditions"
+        : "Agility course disclaimer";
+
+  const waiverCheckboxLabel =
+    waiverIncludesSplash && waiverIncludesAgility
+      ? "I have read and agree to the waiver for splash pool and agility activities"
+      : waiverIncludesSplash
+        ? "I have read and agree to the waiver for splash pool activities"
+        : "I have read and agree to the waiver for agility activities";
+
   const canSubmit =
     dogs.length > 0 &&
     dogs.every((d) => {
@@ -280,9 +320,6 @@ export default function RegisterPage() {
                 You can retrieve your registration anytime by entering your email on our website.
               </p>
               <div className="flex flex-wrap gap-4 justify-center mt-4">
-                <Link href="/">
-                  <Button variant="flat">Back to Home</Button>
-                </Link>
                 <Link href="/register/retrieve">
                   <Button color="primary">View My Registration</Button>
                 </Link>
@@ -316,19 +353,11 @@ export default function RegisterPage() {
   return (
     <main className="bg-cream-100 py-12">
       <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <Link href="/">
-            <Button variant="light" size="sm">
-              ← Back to Home
-            </Button>
-          </Link>
-        </div>
-
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">Register Your Dog</h1>
+            <h1 className="text-4xl font-bold mb-2">Dog activity registration</h1>
             <p className="text-stone-700">
-              Sign up for the Essex Therapy Dogs Fun Dog Show
+              Enter your dog into fun dog shows, agility, and doggie paddle
             </p>
           </div>
 
@@ -341,13 +370,13 @@ export default function RegisterPage() {
             />
             <div className="flex justify-between mt-2 text-sm text-stone-600">
               <span className={step === "owner" ? "text-primary font-medium" : ""}>
-                Your Details
+                Volunteer details
               </span>
               <span className={step === "dogs" ? "text-primary font-medium" : ""}>
                 Add Dogs
               </span>
               <span className={step === "classes" ? "text-primary font-medium" : ""}>
-                Select Classes
+                {step === "classes" ? "Select Classes" : "Select Activities"}
               </span>
               <span className={step === "review" ? "text-primary font-medium" : ""}>
                 Review
@@ -387,11 +416,10 @@ export default function RegisterPage() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold">
-                    Select Classes for {classStepDog.name}
-                  </h2>
+                  <h2 className="text-2xl font-bold">Select Classes</h2>
                   <p className="text-stone-600">
-                    Choose which classes your dog should enter
+                    You can select any class{" "}
+                    {titleCaseWords(classStepDog.name.trim())} is eligible to enter.
                   </p>
                 </div>
                 <Button color="primary" onPress={handleFinishClassSelection}>
@@ -534,67 +562,119 @@ export default function RegisterPage() {
                 {needsWaiver && (
                   <Card className="mb-4 border border-stone-300">
                     <CardBody className="gap-3">
-                      <h3 className="font-semibold text-lg">Activity waiver</h3>
+                      <h3 className="font-semibold text-lg">{waiverTitle}</h3>
                       <div
-                        className="h-28 overflow-y-auto rounded-md border border-stone-200 bg-stone-50/80 px-3 py-2 text-sm text-stone-700 leading-relaxed"
+                        className="max-h-48 overflow-y-auto rounded-md border border-stone-200 bg-stone-50/80 px-3 py-2 text-sm text-stone-700 leading-relaxed"
                         tabIndex={0}
                         role="region"
-                        aria-label="Agility course disclaimer"
+                        aria-label={waiverRegionAriaLabel}
                       >
-                        <p>
-                          Participation in the agility course is entirely voluntary and undertaken at
-                          your own risk.
-                        </p>
-                        <p className="mt-2 font-medium">By taking part, participants confirm that:</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          <li>
-                            They are responsible for ensuring their dog is fit, healthy, and suitable
-                            to take part in physical activity.
-                          </li>
-                          <li>
-                            Their dog is under control at all times and able to interact safely with
-                            people and other dogs.
-                          </li>
-                          <li>
-                            They will follow all instructions provided by event organisers and
-                            volunteers.
-                          </li>
-                        </ul>
-                        <p className="mt-2 font-medium">
-                          The organisers, volunteers, and hosting venue accept no liability for:
-                        </p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          <li>
-                            Injury, loss, or damage to persons, dogs, or property arising from
-                            participation in the agility course.
-                          </li>
-                          <li>
-                            Any incidents resulting from failure to follow instructions or control a
-                            dog appropriately.
-                          </li>
-                        </ul>
-                        <p className="mt-2 font-medium">Owners/handlers are fully responsible for:</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          <li>Their dog&apos;s behaviour at all times.</li>
-                          <li>Cleaning up after their dog.</li>
-                          <li>Ensuring their dog does not pose a risk to others.</li>
-                        </ul>
-                        <p className="mt-2">
-                          Children must be supervised by a responsible adult at all times while using
-                          or near the agility course.
-                        </p>
-                        <p className="mt-2">
-                          The organisers reserve the right to refuse participation or ask any
-                          participant to leave the activity area if they believe there is a risk to
-                          safety.
-                        </p>
-                        <p className="mt-2">
-                          I can confirm I have read and understand this Agility Course Disclaimer
-                          and the risks associated with it.
-                        </p>
+                        {waiverIncludesAgility && (
+                          <div>
+                            <p>
+                              Participation in the agility course is entirely voluntary and undertaken
+                              at your own risk.
+                            </p>
+                            <p className="mt-2 font-medium">By taking part, participants confirm that:</p>
+                            <ul className="mt-1 list-disc space-y-1 pl-5">
+                              <li>
+                                They are responsible for ensuring their dog is fit, healthy, and
+                                suitable to take part in physical activity.
+                              </li>
+                              <li>
+                                Their dog is under control at all times and able to interact safely with
+                                people and other dogs.
+                              </li>
+                              <li>
+                                They will follow all instructions provided by event organisers and
+                                volunteers.
+                              </li>
+                            </ul>
+                            <p className="mt-2 font-medium">
+                              The organisers, volunteers, and hosting venue accept no liability for:
+                            </p>
+                            <ul className="mt-1 list-disc space-y-1 pl-5">
+                              <li>
+                                Injury, loss, or damage to persons, dogs, or property arising from
+                                participation in the agility course.
+                              </li>
+                              <li>
+                                Any incidents resulting from failure to follow instructions or control a
+                                dog appropriately.
+                              </li>
+                            </ul>
+                            <p className="mt-2 font-medium">Owners/handlers are fully responsible for:</p>
+                            <ul className="mt-1 list-disc space-y-1 pl-5">
+                              <li>Their dog&apos;s behaviour at all times.</li>
+                              <li>Cleaning up after their dog.</li>
+                              <li>Ensuring their dog does not pose a risk to others.</li>
+                            </ul>
+                            <p className="mt-2">
+                              Children must be supervised by a responsible adult at all times while using
+                              or near the agility course.
+                            </p>
+                            <p className="mt-2">
+                              The organisers reserve the right to refuse participation or ask any
+                              participant to leave the activity area if they believe there is a risk to
+                              safety.
+                            </p>
+                            <p className="mt-2">
+                              I can confirm I have read and understand this Agility Course Disclaimer
+                              and the risks associated with it.
+                            </p>
+                          </div>
+                        )}
+
+                        {waiverIncludesAgility && waiverIncludesSplash && (
+                          <div className="mt-4 border-t border-stone-200 pt-4" aria-hidden="true" />
+                        )}
+
+                        {waiverIncludesSplash && (
+                          <div>
+                            <p className="font-medium">2. Terms and Conditions</p>
+                            <p className="mt-2">
+                              <span className="font-medium">Health &amp; Vaccinations: </span>I certify
+                              that my dog is in good health, free of parasites, and up to date on all
+                              required vaccinations (including Rabies, Distemper, and Parvovirus). I
+                              confirm my dog does not have any open wounds, stitches, or contagious skin
+                              conditions.
+                            </p>
+                            <p className="mt-2">
+                              <span className="font-medium">Supervision: </span>I understand that I am
+                              solely responsible for the supervision of my dog at all times. I will not
+                              leave my dog unattended in or near the splash pool area.
+                            </p>
+                            <p className="mt-2">
+                              <span className="font-medium">Behavior: </span>I certify that my dog is
+                              socialized and does not have a history of aggressive behavior toward people
+                              or other dogs. I agree to remove my dog immediately if they show signs of
+                              stress or aggression.
+                            </p>
+                            <p className="mt-2">
+                              <span className="font-medium">Inherent Risks: </span>I acknowledge that
+                              water activities involve inherent risks, including but not limited to
+                              slipping, drowning, ear infections, water intoxication, or injury from
+                              interaction with other dogs. I voluntarily assume all risks associated with
+                              my dog&apos;s participation.
+                            </p>
+                            <p className="mt-3 font-medium">3. Release of Liability</p>
+                            <p className="mt-2">
+                              I, the undersigned, hereby release, waive, and discharge the facility
+                              owners, operators, employees, and agents from any and all liability, claims,
+                              demands, or causes of action whatsoever arising out of or related to any
+                              loss, damage, or injury (including death) that may be sustained by my dog
+                              or myself while on the premises or using the splash pool.
+                            </p>
+                            <p className="mt-2">
+                              I further agree to indemnify and hold harmless the facility from any loss,
+                              liability, damage, or costs, including court costs and attorney fees, that
+                              they may incur due to my dog&apos;s presence or actions on the premises.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <Checkbox isSelected={waiverAccepted} onValueChange={setWaiverAccepted}>
-                        I have read and agree to the waiver for agility activities
+                        {waiverCheckboxLabel}
                       </Checkbox>
                     </CardBody>
                   </Card>

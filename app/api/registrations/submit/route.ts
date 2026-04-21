@@ -46,11 +46,13 @@ export async function POST(request: NextRequest) {
 
     const dogs = await dogOperations.getByOwnerId(ownerId);
 
-    const needsWaiver = dogs.some((d) => d.activity_agility === 1);
+    const needsWaiver = dogs.some(
+      (d) => d.activity_agility === 1 || d.activity_splash_pool === 1
+    );
 
     if (needsWaiver && waiverAccepted !== true) {
       return NextResponse.json(
-        { error: 'You must accept the waiver for agility activities' },
+        { error: 'You must accept the activity waiver' },
         { status: 400 }
       );
     }

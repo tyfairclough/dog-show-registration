@@ -107,14 +107,6 @@ function RetrieveContent() {
     return (
       <main className="bg-cream-100 py-12">
         <div className="container mx-auto px-4 max-w-3xl">
-          <div className="mb-8">
-            <Link href="/">
-              <Button variant="light" size="sm">
-                ← Back to Home
-              </Button>
-            </Link>
-          </div>
-
           <Card>
             <CardHeader className="flex flex-col items-start gap-1">
               <h1 className="text-2xl font-bold">Your Registration</h1>
@@ -229,14 +221,6 @@ function RetrieveContent() {
   return (
     <main className="bg-cream-100 py-12">
       <div className="container mx-auto px-4 max-w-md">
-        <div className="mb-8">
-          <Link href="/">
-            <Button variant="light" size="sm">
-              ← Back to Home
-            </Button>
-          </Link>
-        </div>
-
         <Card>
           <CardHeader className="flex flex-col items-start gap-1">
             <h1 className="text-2xl font-bold">Retrieve Your Registration</h1>
