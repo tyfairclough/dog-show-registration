@@ -61,6 +61,22 @@ export default function RegisterPage() {
   const [submitError, setSubmitError] = useState("");
   const [retrievalToken, setRetrievalToken] = useState<string | null>(null);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [agilityRegistrationEnabled, setAgilityRegistrationEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        setAgilityRegistrationEnabled(Boolean(data.agilityRegistrationEnabled));
+      })
+      .catch((err) => {
+        console.error("Failed to fetch site settings:", err);
+      })
+      .finally(() => {
+        setSettingsLoaded(true);
+      });
+  }, []);
 
   useEffect(() => {
     fetch("/api/classes")
@@ -357,7 +373,9 @@ export default function RegisterPage() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">Dog activity registration</h1>
             <p className="text-stone-700">
-              Enter your dog into fun dog shows, agility, and doggie paddle
+              {agilityRegistrationEnabled
+                ? "Enter your dog into fun dog shows, agility, and doggie paddle"
+                : "Enter your dog into fun dog shows and doggie paddle"}
             </p>
           </div>
 
@@ -409,6 +427,9 @@ export default function RegisterPage() {
                 }
               }}
               editingDog={currentDogIndex !== null ? dogs[currentDogIndex] : null}
+              agilityRegistrationEnabled={
+                settingsLoaded ? agilityRegistrationEnabled : false
+              }
             />
           )}
 

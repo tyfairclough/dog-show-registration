@@ -22,6 +22,7 @@ interface DogFormProps {
   onSubmit: (dog: DogFormData) => void;
   onCancel: () => void;
   editingDog?: DogFormData | null;
+  agilityRegistrationEnabled?: boolean;
 }
 
 type WizardStep = "name" | "activities" | "details";
@@ -41,7 +42,12 @@ function titleCaseWords(s: string): string {
     .join(" ");
 }
 
-export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps) {
+export default function DogForm({
+  onSubmit,
+  onCancel,
+  editingDog,
+  agilityRegistrationEnabled = false,
+}: DogFormProps) {
   const [step, setStep] = useState<WizardStep>("name");
   const [name, setName] = useState(editingDog?.name || "");
   const [activities, setActivities] = useState<DogActivities>(
@@ -66,17 +72,22 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
   }, [editingDog]);
 
   const buildPayload = (): DogFormData => {
+    const resolvedActivities: DogActivities = {
+      ...activities,
+      agility: agilityRegistrationEnabled ? activities.agility : false,
+    };
+
     const base: DogFormData = {
       id: editingDog?.id,
       name: name.trim(),
-      activities: { ...activities },
+      activities: resolvedActivities,
       isRescue,
-      selectedClasses: activities.funDogShow
+      selectedClasses: resolvedActivities.funDogShow
         ? editingDog?.selectedClasses || []
         : [],
     };
 
-    if (activities.funDogShow) {
+    if (resolvedActivities.funDogShow) {
       return {
         ...base,
         breed,
@@ -110,7 +121,9 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
   const handleActivitiesNext = () => {
     setError("");
     const any =
-      activities.funDogShow || activities.splashPool || activities.agility;
+      activities.funDogShow ||
+      activities.splashPool ||
+      (agilityRegistrationEnabled && activities.agility);
     if (!any) {
       setError("Select at least one activity");
       return;
@@ -166,8 +179,17 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
         ? `Choose activities for ${titleCaseWords(name.trim())}`
         : "We need these details for fun dog show classes";
 
-  const allActivitiesSelected =
-    activities.funDogShow && activities.splashPool && activities.agility;
+  const allActivitiesSelected = agilityRegistrationEnabled
+    ? activities.funDogShow && activities.splashPool && activities.agility
+    : activities.funDogShow && activities.splashPool;
+
+  const handleSelectAll = (v: boolean) => {
+    setActivities({
+      funDogShow: v,
+      splashPool: v,
+      agility: agilityRegistrationEnabled ? v : false,
+    });
+  };
 
   return (
     <Card className="max-w-md mx-auto">
@@ -218,7 +240,10 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
                   setActivities((a) => ({ ...a, funDogShow: v }))
                 }
               >
-                Fun dog show classes
+                <span className="flex flex-col gap-0.5">
+                  <span>Fun dog show classes</span>
+                  <span className="text-sm text-stone-600 font-normal">£2 per each</span>
+                </span>
               </Checkbox>
               <Checkbox
                 isSelected={activities.splashPool}
@@ -226,25 +251,24 @@ export default function DogForm({ onSubmit, onCancel, editingDog }: DogFormProps
                   setActivities((a) => ({ ...a, splashPool: v }))
                 }
               >
-                Splash pool session
+                <span className="flex flex-col gap-0.5">
+                  <span>Splash pool session</span>
+                  <span className="text-sm text-stone-600 font-normal">£5 for 10 minutes</span>
+                </span>
               </Checkbox>
-              <Checkbox
-                isSelected={activities.agility}
-                onValueChange={(v) =>
-                  setActivities((a) => ({ ...a, agility: v }))
-                }
-              >
-                Agility session
-              </Checkbox>
+              {agilityRegistrationEnabled && (
+                <Checkbox
+                  isSelected={activities.agility}
+                  onValueChange={(v) =>
+                    setActivities((a) => ({ ...a, agility: v }))
+                  }
+                >
+                  Agility session
+                </Checkbox>
+              )}
               <Checkbox
                 isSelected={allActivitiesSelected}
-                onValueChange={(v) =>
-                  setActivities({
-                    funDogShow: v,
-                    splashPool: v,
-                    agility: v,
-                  })
-                }
+                onValueChange={handleSelectAll}
               >
                 Select all
               </Checkbox>

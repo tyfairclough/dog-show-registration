@@ -7,6 +7,7 @@ import Link from "next/link";
 import ClassTable from "@/components/admin/ClassTable";
 import ClassForm from "@/components/admin/ClassForm";
 import RegistrationTable from "@/components/admin/RegistrationTable";
+import AdminSettings from "@/components/admin/AdminSettings";
 import { DogClass, CreateClassRequest, AdminOwnerWithDogs } from "@/types";
 
 export default function AdminPage() {
@@ -244,6 +245,9 @@ export default function AdminPage() {
                   />
                 </CardBody>
               </Card>
+            </Tab>
+            <Tab key="settings" title="Settings">
+              <AdminSettings />
             </Tab>
           </Tabs>
         </div>

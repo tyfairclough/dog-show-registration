@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dogOperations } from '@/lib/db';
+import { getAgilityRegistrationEnabled } from '@/lib/settings';
 import { CreateDogRequest } from '@/types';
 
 // GET all dogs or by owner
@@ -45,7 +46,18 @@ export async function POST(request: NextRequest) {
 
     const fun = Boolean(body.activityFunShow);
     const splash = Boolean(body.activitySplashPool);
-    const agility = Boolean(body.activityAgility);
+    const agilityRequested = Boolean(body.activityAgility);
+    const agilityEnabled = await getAgilityRegistrationEnabled();
+
+    if (agilityRequested && !agilityEnabled) {
+      return NextResponse.json(
+        { error: 'Agility registration is not currently available' },
+        { status: 400 }
+      );
+    }
+
+    const agility = agilityEnabled && agilityRequested;
+
     if (!fun && !splash && !agility) {
       return NextResponse.json(
         { error: 'Select at least one activity for this dog' },

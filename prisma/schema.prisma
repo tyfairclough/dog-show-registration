@@ -78,3 +78,10 @@ model Registration {
   @@map("registrations")
 }
 
+model SiteSetting {
+  key   String @id
+  value String
+
+  @@map("site_settings")
+}
+
