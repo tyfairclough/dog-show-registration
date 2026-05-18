@@ -7,6 +7,7 @@ import OwnerForm from "@/components/register/OwnerForm";
 import DogForm from "@/components/register/DogForm";
 import ClassCard from "@/components/register/ClassCard";
 import { DogClass, DogFormData, Owner } from "@/types";
+import { SPLASH_POOL_FEE_PER_DOG, toFeeNumber, totalSplashPoolFees } from "@/lib/fees";
 
 type Step = "owner" | "dogs" | "classes" | "review";
 
@@ -40,6 +41,22 @@ function titleCaseWords(s: string): string {
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
+}
+
+function classFeesTotal(dogs: DogFormData[], classes: DogClass[]): number {
+  return dogs.reduce((totalAcc, dog) => {
+    return (
+      totalAcc +
+      dog.selectedClasses.reduce((sum, classId) => {
+        const c = classes.find((cl) => cl.id === classId);
+        return sum + (c ? toFeeNumber(c.fee) : 0);
+      }, 0)
+    );
+  }, 0);
+}
+
+function registrationDayTotal(dogs: DogFormData[], classes: DogClass[]): number {
+  return classFeesTotal(dogs, classes) + totalSplashPoolFees(dogs);
 }
 
 export default function RegisterPage() {
@@ -541,17 +558,15 @@ export default function RegisterPage() {
                         </p>
                       )}
 
-                      {dog.activities.funDogShow && dog.selectedClasses.length > 0 && (
+                      {(dog.activities.funDogShow && dog.selectedClasses.length > 0) ||
+                      dog.activities.splashPool ? (
                         <div className="space-y-2">
-                          {dog.selectedClasses.map((classId) => {
+                          {dog.activities.funDogShow &&
+                            dog.selectedClasses.map((classId) => {
                             const c = classes.find((cl) => cl.id === classId);
                             if (!c) return null;
 
-                            const feeNumber =
-                              typeof c.fee === "number" ? c.fee : Number(c.fee ?? 0);
-                            const formattedFee = Number.isFinite(feeNumber)
-                              ? feeNumber.toFixed(2)
-                              : "0.00";
+                            const formattedFee = toFeeNumber(c.fee).toFixed(2);
 
                             return (
                               <div
@@ -574,8 +589,16 @@ export default function RegisterPage() {
                               </div>
                             );
                           })}
+                          {dog.activities.splashPool && (
+                            <div className="flex justify-between items-center bg-cream-200/80 p-2 rounded border border-cream-300/50">
+                              <span>Splash pool session</span>
+                              <span className="text-primary">
+                                £{SPLASH_POOL_FEE_PER_DOG.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      ) : null}
                     </CardBody>
                   </Card>
                 ))}
@@ -728,24 +751,7 @@ export default function RegisterPage() {
                       <div className="flex justify-between text-lg font-bold">
                         <span>Total on the day:</span>
                         <span className="text-primary">
-                          £
-                          {(() => {
-                            const total = dogs.reduce((totalAcc, dog) => {
-                              return (
-                                totalAcc +
-                                dog.selectedClasses.reduce((sum, classId) => {
-                                  const c = classes.find((cl) => cl.id === classId);
-                                  if (!c) return sum;
-
-                                  const feeNumber =
-                                    typeof c.fee === "number" ? c.fee : Number(c.fee ?? 0);
-                                  return sum + (Number.isFinite(feeNumber) ? feeNumber : 0);
-                                }, 0)
-                              );
-                            }, 0);
-
-                            return Number.isFinite(total) ? total.toFixed(2) : "0.00";
-                          })()}
+                          £{registrationDayTotal(dogs, classes).toFixed(2)}
                         </span>
                       </div>
                       <p className="text-xs text-stone-600 mt-1">Fees collected at the event</p>

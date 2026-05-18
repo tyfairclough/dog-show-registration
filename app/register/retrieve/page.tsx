@@ -13,6 +13,7 @@ import {
 } from "@heroui/react";
 import Link from "next/link";
 import { Owner, Dog } from "@/types";
+import { SPLASH_POOL_FEE_PER_DOG, totalSplashPoolFees } from "@/lib/fees";
 
 interface RegistrationData {
   owner: Owner;
@@ -99,9 +100,12 @@ function RetrieveContent() {
     }
   };
 
-  const totalFee = data?.registrations
-    .filter(r => r.status !== 'cancelled')
-    .reduce((sum, r) => sum + r.class_fee, 0) || 0;
+  const classFees =
+    data?.registrations
+      .filter((r) => r.status !== "cancelled")
+      .reduce((sum, r) => sum + r.class_fee, 0) ?? 0;
+  const splashPoolFees = data ? totalSplashPoolFees(data.dogs) : 0;
+  const totalFee = classFees + splashPoolFees;
 
   if (data) {
     return (
@@ -131,7 +135,7 @@ function RetrieveContent() {
                         ) : null}
                       </div>
                     </div>
-                    {regs.length === 0 ? (
+                    {regs.length === 0 && dog.activity_splash_pool !== 1 ? (
                       <p className="text-sm text-stone-600 bg-cream-100 rounded p-2">
                         No fun dog show class entries (splash pool / agility only, or classes pending).
                       </p>
@@ -166,6 +170,14 @@ function RetrieveContent() {
                             </div>
                           </div>
                         ))}
+                        {dog.activity_splash_pool === 1 && (
+                          <div className="flex items-center justify-between bg-cream-200/80 p-2 rounded border border-cream-300/50">
+                            <span>Splash pool session</span>
+                            <span className="text-primary">
+                              £{SPLASH_POOL_FEE_PER_DOG.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

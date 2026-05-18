@@ -5,6 +5,7 @@ import {
   sendAdminRegistrationNotification,
   type RegistrationDogDetail,
 } from '@/lib/email';
+import { SPLASH_POOL_FEE_PER_DOG } from '@/lib/fees';
 
 function toCurrencyNumber(value: unknown): number {
   if (typeof value === 'number') {
@@ -76,7 +77,10 @@ export async function POST(request: NextRequest) {
 
       const otherActivities: string[] = [];
       if (dog.activity_splash_pool === 1) {
-        otherActivities.push('Splash pool session');
+        otherActivities.push(
+          `Splash pool session (£${SPLASH_POOL_FEE_PER_DOG.toFixed(2)})`
+        );
+        totalFee += SPLASH_POOL_FEE_PER_DOG;
       }
       if (dog.activity_agility === 1) {
         otherActivities.push('Agility session');
