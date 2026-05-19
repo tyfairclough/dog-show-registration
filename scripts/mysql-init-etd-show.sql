@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS registrations;
 DROP TABLE IF EXISTS dogs;
 DROP TABLE IF EXISTS owners;
 DROP TABLE IF EXISTS classes;
+DROP TABLE IF EXISTS site_settings;
 
 -- Classes table
 CREATE TABLE classes (
@@ -37,6 +38,7 @@ CREATE TABLE owners (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
   retrieval_token CHAR(36) NULL,
+  activity_waiver_accepted_at DATETIME(3) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_owners_email (email),
@@ -52,6 +54,9 @@ CREATE TABLE dogs (
   age INT NULL,
   sex VARCHAR(10) NULL,
   is_rescue TINYINT(1) NOT NULL DEFAULT 0,
+  activity_fun_show INT NOT NULL DEFAULT 0,
+  activity_splash_pool INT NOT NULL DEFAULT 0,
+  activity_agility INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_dogs_owner (owner_id),
@@ -60,6 +65,15 @@ CREATE TABLE dogs (
     REFERENCES owners (id)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Site settings (admin toggles)
+CREATE TABLE site_settings (
+  `key` VARCHAR(191) NOT NULL,
+  `value` VARCHAR(191) NOT NULL,
+  PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO site_settings (`key`, `value`) VALUES ('agility_registration_enabled', '0');
 
 -- Registrations table
 CREATE TABLE registrations (

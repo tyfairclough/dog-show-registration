@@ -180,6 +180,18 @@ export default function RegisterPage() {
     setDogs(newDogs);
   };
 
+  const handleRemoveSplashPool = (dogIndex: number) => {
+    const newDogs = [...dogs];
+    newDogs[dogIndex] = {
+      ...newDogs[dogIndex],
+      activities: {
+        ...newDogs[dogIndex].activities,
+        splashPool: false,
+      },
+    };
+    setDogs(newDogs);
+  };
+
   const handleEditDog = (index: number) => {
     setCurrentDogIndex(index);
     setIsAddingDog(true);
@@ -592,9 +604,20 @@ export default function RegisterPage() {
                           {dog.activities.splashPool && (
                             <div className="flex justify-between items-center bg-cream-200/80 p-2 rounded border border-cream-300/50">
                               <span>Splash pool session</span>
-                              <span className="text-primary">
-                                £{SPLASH_POOL_FEE_PER_DOG.toFixed(2)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-primary">
+                                  £{SPLASH_POOL_FEE_PER_DOG.toFixed(2)}
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="light"
+                                  color="danger"
+                                  isIconOnly
+                                  onPress={() => handleRemoveSplashPool(index)}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </div>
